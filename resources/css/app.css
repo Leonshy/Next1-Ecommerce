@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 207 60% 28%;
+        --card: 0 0% 100%;
+        --card-foreground: 207 60% 28%;
+        --primary: 207 60% 28%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 28 80% 52%;
+        --secondary-foreground: 0 0% 100%;
+        --muted: 210 20% 95%;
+        --muted-foreground: 207 30% 45%;
+        --accent: 28 80% 52%;
+        --accent-foreground: 0 0% 100%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 210 20% 85%;
+        --radius: 0.5rem;
+        --shadow-soft: 0 4px 20px -2px hsl(207 60% 28% / 0.08);
+        --shadow-card: 0 2px 12px -2px hsl(207 60% 28% / 0.06);
+        --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+        border-color: hsl(var(--border));
+    }
+
+    body {
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+        font-family: 'Open Sans', sans-serif;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Roboto', sans-serif;
+    }
+}
+
+@layer components {
+    /* Btn primary */
+    .btn-primary {
+        @apply bg-primary text-white px-4 py-2 rounded font-semibold hover:opacity-90 transition-all duration-300;
+    }
+
+    /* Btn accent (orange) */
+    .btn-accent {
+        @apply bg-accent text-white px-4 py-2 rounded font-semibold hover:bg-accent-hover transition-all duration-300;
+    }
+
+    /* Section title style (colored bar + triangle like reference) */
+    .section-title {
+        @apply flex items-center justify-between mb-6 border-b-2 border-border pb-0;
+    }
+
+    .section-title-bar {
+        @apply text-white font-bold text-sm uppercase px-6 py-3 relative inline-block;
+    }
+
+    .section-title-bar::after {
+        content: '';
+        position: absolute;
+        right: -12px;
+        top: 0;
+        height: 100%;
+        width: 12px;
+        background: inherit;
+        clip-path: polygon(0 0, 100% 50%, 0 100%);
+    }
+
+    /* Product card hover actions */
+    .product-card {
+        @apply bg-card border border-border hover:shadow-soft transition-all duration-300 overflow-hidden relative;
+    }
+
+    .product-card .hover-actions {
+        @apply absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 p-2 translate-y-full transition-transform duration-300;
+        background: linear-gradient(to top, rgba(0,0,0,0.2), transparent);
+    }
+
+    .product-card:hover .hover-actions {
+        @apply translate-y-0;
+    }
+
+    /* Category list item */
+    .category-list-item {
+        @apply w-full px-4 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors text-sm text-foreground uppercase tracking-wide border-b border-border;
+    }
+
+    /* Input style */
+    .input-field {
+        @apply w-full border border-border rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground bg-white;
+    }
+
+    /* Top bar link */
+    .topbar-link {
+        @apply hover:text-accent transition-colors flex items-center gap-1;
+    }
+
+    /* Promo banner */
+    .promo-banner {
+        @apply relative h-32 overflow-hidden cursor-pointer;
+    }
+
+    /* Badge system */
+    .badge-oferta   { @apply bg-green-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
+    .badge-destacado { @apply bg-amber-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
+    .badge-nuevo    { @apply bg-blue-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
+    .badge-custom   { @apply bg-primary text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
+    .badge-discount { @apply bg-destructive text-white text-[10px] px-2 py-0.5 font-bold; }
+}
