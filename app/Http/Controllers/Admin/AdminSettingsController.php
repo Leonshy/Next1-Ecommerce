@@ -1,0 +1,177 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\AnalyticsSetting;
+use App\Models\HcaptchaSetting;
+use App\Models\PaymentSetting;
+use App\Models\SeoSetting;
+use App\Models\ShippingSetting;
+use App\Models\SmtpSetting;
+use App\Services\SmtpEmailService;
+use Illuminate\Http\Request;
+
+class AdminSettingsController extends Controller
+{
+    // ── Shipping ──────────────────────────────────────────────────────────────
+    public function shipping()
+    {
+        $settings = ShippingSetting::getDefault();
+        return view('admin.settings.shipping', compact('settings'));
+    }
+
+    public function updateShipping(Request $request)
+    {
+        $settings = ShippingSetting::getDefault();
+        $settings->update($request->only([
+            'free_shipping_enabled', 'free_shipping_min_amount',
+            'store_pickup_enabled', 'envio_propio_enabled', 'zones',
+            'aex_enabled', 'aex_api_user', 'aex_api_password',
+            'aex_environment',
+        ]));
+
+        return back()->with('success', 'Configuración de envíos actualizada.');
+    }
+
+    // ── Payments ──────────────────────────────────────────────────────────────
+    public function payments()
+    {
+        $providers = ['bancard', 'pagopar', 'coinbase', 'coinspaid'];
+        $settings  = [];
+        foreach ($providers as $provider) {
+            $settings[$provider] = PaymentSetting::firstOrCreate(
+                ['provider' => $provider],
+                ['environment' => 'sandbox']
+            );
+        }
+        return view('admin.settings.payments', compact('settings'));
+    }
+
+    public function updatePayment(Request $request, string $provider)
+    {
+        $setting = PaymentSetting::firstOrCreate(['provider' => $provider]);
+        $setting->update($request->only(['public_key', 'private_key', 'webhook_secret', 'environment', 'is_enabled']));
+        return back()->with('success', 'Configuración de ' . $provider . ' actualizada.');
+    }
+
+    public function validatePayment(Request $request, string $provider)
+    {
+        $setting = PaymentSetting::where('provider', $provider)->first();
+        if (!$setting) return back()->with('error', 'Proveedor no encontrado.');
+
+        // Simple format validation
+        $valid = match($provider) {
+            'bancard'   => strlen($setting->public_key ?? '') >= 20 && strlen($setting->private_key ?? '') >= 20,
+            'pagopar'   => strlen($setting->public_key ?? '') >= 10,
+            'coinspaid' => strlen($setting->public_key ?? '') >= 10,
+            'coinbase'  => $this->validateCoinbase($setting->public_key ?? ''),
+            default     => false,
+        };
+
+        $setting->update(['is_validated' => $valid, 'is_enabled' => $valid]);
+        $msg = $valid ? 'Credenciales válidas.' : 'Credenciales inválidas.';
+
+        return back()->with($valid ? 'success' : 'error', $msg);
+    }
+
+    private function validateCoinbase(string $apiKey): bool
+    {
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'X-CC-Api-Key' => $apiKey,
+                'X-CC-Version' => '2018-03-22',
+            ])->get('https://api.commerce.coinbase.com/charges');
+            return $response->successful();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    // ── SEO ───────────────────────────────────────────────────────────────────
+    public function seo()
+    {
+        $pages    = ['home', 'products', 'about_us', 'faq', 'global'];
+        $settings = [];
+        foreach ($pages as $page) {
+            $settings[$page] = SeoSetting::firstOrCreate(['page_key' => $page]);
+        }
+        return view('admin.settings.seo', compact('settings'));
+    }
+
+    public function updateSeo(Request $request)
+    {
+        foreach ($request->input('pages', []) as $pageKey => $data) {
+            SeoSetting::updateOrCreate(
+                ['page_key' => $pageKey],
+                array_filter($data, fn($v) => $v !== null)
+            );
+        }
+        return back()->with('success', 'SEO actualizado.');
+    }
+
+    // ── Analytics ─────────────────────────────────────────────────────────────
+    public function analytics()
+    {
+        $settings = AnalyticsSetting::first() ?? new AnalyticsSetting();
+        return view('admin.settings.analytics', compact('settings'));
+    }
+
+    public function updateAnalytics(Request $request)
+    {
+        AnalyticsSetting::updateOrCreate([], $request->only([
+            'ga4_enabled', 'ga4_measurement_id',
+            'meta_pixel_enabled', 'meta_pixel_id',
+            'gtm_enabled', 'gtm_container_id',
+            'track_view_item', 'track_add_to_cart',
+            'track_begin_checkout', 'track_purchase',
+        ]));
+        return back()->with('success', 'Analytics actualizado.');
+    }
+
+    // ── Email / SMTP ──────────────────────────────────────────────────────────
+    public function email()
+    {
+        $settings = SmtpSetting::first() ?? new SmtpSetting();
+        return view('admin.settings.email', compact('settings'));
+    }
+
+    public function updateEmail(Request $request)
+    {
+        SmtpSetting::updateOrCreate([], $request->only([
+            'host', 'port', 'username', 'password',
+            'encryption', 'from_email', 'from_name', 'is_active',
+        ]));
+        return back()->with('success', 'SMTP actualizado.');
+    }
+
+    public function sendTestEmail(Request $request)
+    {
+        $request->validate(['to' => 'required|email']);
+
+        $service = new SmtpEmailService();
+        $sent    = $service->sendHtml(
+            $request->to,
+            'Email de prueba - Next1',
+            '<h1>¡Funciona!</h1><p>Este es un email de prueba desde el panel de administración de Next1.</p>'
+        );
+
+        return back()->with($sent ? 'success' : 'error', $sent ? 'Email enviado.' : 'Error al enviar el email.');
+    }
+
+    // ── hCaptcha ──────────────────────────────────────────────────────────────
+    public function hcaptcha()
+    {
+        $settings = HcaptchaSetting::first() ?? new HcaptchaSetting();
+        return view('admin.settings.hcaptcha', compact('settings'));
+    }
+
+    public function updateHcaptcha(Request $request)
+    {
+        HcaptchaSetting::updateOrCreate([], $request->only([
+            'is_enabled', 'site_key', 'secret_key',
+            'protect_login', 'protect_register', 'protect_newsletter',
+        ]));
+        return back()->with('success', 'hCaptcha actualizado.');
+    }
+}
