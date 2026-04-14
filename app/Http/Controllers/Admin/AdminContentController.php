@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SiteContent;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AdminContentController extends Controller
@@ -30,7 +31,32 @@ class AdminContentController extends Controller
             'whatsapp'    => 'nullable|string|max:30',
             'address'     => 'nullable|string|max:300',
             'mapUrl'      => 'nullable|url|max:1000',
+            'logo'        => 'nullable|image|mimes:png,jpg,jpeg,svg,webp|max:2048',
+            'favicon'     => 'nullable|image|mimes:png,jpg,jpeg,ico,svg|max:512',
         ]);
+
+        $existing = SiteContent::getByKey('store_info');
+        $currentMeta = $existing?->metadata ?? $this->defaultStoreInfo();
+
+        // Subir logo si se envió uno nuevo
+        if ($request->hasFile('logo')) {
+            $file = $request->file('logo');
+            $filename = 'logo-' . time() . '.' . $file->getClientOriginalExtension();
+            Storage::disk('public')->putFileAs('media', $file, $filename);
+            $validated['logoUrl'] = Storage::disk('public')->url('media/' . $filename);
+        } else {
+            $validated['logoUrl'] = $currentMeta['logoUrl'] ?? null;
+        }
+
+        // Subir favicon si se envió uno nuevo
+        if ($request->hasFile('favicon')) {
+            $file = $request->file('favicon');
+            $filename = 'favicon-' . time() . '.' . $file->getClientOriginalExtension();
+            Storage::disk('public')->putFileAs('media', $file, $filename);
+            $validated['faviconUrl'] = Storage::disk('public')->url('media/' . $filename);
+        } else {
+            $validated['faviconUrl'] = $currentMeta['faviconUrl'] ?? null;
+        }
 
         $days = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
         $schedule = [];
@@ -232,6 +258,8 @@ class AdminContentController extends Controller
             'storeName'      => 'NEXT1',
             'slogan'         => 'Tu tienda de tecnología y más',
             'description'    => '',
+            'logoUrl'        => null,
+            'faviconUrl'     => null,
             'email'          => '',
             'phone1'         => '',
             'phone2'         => '',

@@ -39,12 +39,17 @@
 
                 {{-- Logo --}}
                 <a href="{{ route('home') }}" class="flex-shrink-0">
-                    <div class="flex items-center gap-1">
-                        <div class="w-9 h-9 bg-primary rounded flex items-center justify-center">
-                            <span class="text-white font-black text-sm">N1</span>
+                    @if(!empty($info['logoUrl']))
+                        <img src="{{ $info['logoUrl'] }}" alt="{{ $info['storeName'] ?? config('app.name') }}"
+                             class="h-10 w-auto object-contain">
+                    @else
+                        <div class="flex items-center gap-1">
+                            <div class="w-9 h-9 bg-primary rounded flex items-center justify-center">
+                                <span class="text-white font-black text-sm">N1</span>
+                            </div>
+                            <span class="text-primary font-black text-xl tracking-tight hidden sm:block">NEXT1</span>
                         </div>
-                        <span class="text-primary font-black text-xl tracking-tight hidden sm:block">NEXT1</span>
-                    </div>
+                    @endif
                 </a>
 
                 {{-- Search --}}

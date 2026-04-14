@@ -2,7 +2,7 @@
 @section('title', 'Info de la Tienda')
 
 @section('content')
-<form method="POST" action="{{ route('admin.content.store-info.update') }}" x-data="{ activeTab: 'general' }">
+<form method="POST" action="{{ route('admin.content.store-info.update') }}" enctype="multipart/form-data" x-data="{ activeTab: 'general' }">
     @csrf
 
     {{-- Tabs --}}
@@ -25,6 +25,59 @@
     {{-- Tab: Datos Generales --}}
     <div x-show="activeTab === 'general'" class="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
         <h2 class="text-base font-semibold text-gray-900 border-b border-gray-100 pb-3">Datos Generales</h2>
+
+        {{-- Identidad Visual --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-5 border-b border-gray-100">
+
+            {{-- Logo --}}
+            <div x-data="{ preview: '{{ $data['logoUrl'] ?? '' }}' }">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Logo de la tienda</label>
+                <div class="flex items-center gap-4">
+                    <div class="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50 overflow-hidden flex-shrink-0">
+                        <template x-if="preview">
+                            <img :src="preview" class="w-full h-full object-contain p-1">
+                        </template>
+                        <template x-if="!preview">
+                            <span class="text-xs text-gray-400 text-center px-2">Sin logo</span>
+                        </template>
+                    </div>
+                    <div class="flex-1">
+                        <input type="file" name="logo" accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                               @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : preview"
+                               class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-900 file:text-white hover:file:bg-gray-700 cursor-pointer">
+                        <p class="text-xs text-gray-400 mt-1.5">PNG, JPG, SVG o WebP · Máx. 2 MB</p>
+                        @if(!empty($data['logoUrl']))
+                            <p class="text-xs text-green-600 mt-1">Logo actual guardado</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- Favicon --}}
+            <div x-data="{ preview: '{{ $data['faviconUrl'] ?? '' }}' }">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Favicon</label>
+                <div class="flex items-center gap-4">
+                    <div class="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50 overflow-hidden flex-shrink-0">
+                        <template x-if="preview">
+                            <img :src="preview" class="w-16 h-16 object-contain">
+                        </template>
+                        <template x-if="!preview">
+                            <span class="text-xs text-gray-400 text-center px-2">Sin favicon</span>
+                        </template>
+                    </div>
+                    <div class="flex-1">
+                        <input type="file" name="favicon" accept="image/png,image/jpeg,image/x-icon,image/svg+xml"
+                               @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : preview"
+                               class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-900 file:text-white hover:file:bg-gray-700 cursor-pointer">
+                        <p class="text-xs text-gray-400 mt-1.5">PNG, ICO o SVG · Máx. 512 KB · Recomendado 32×32 px</p>
+                        @if(!empty($data['faviconUrl']))
+                            <p class="text-xs text-green-600 mt-1">Favicon actual guardado</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+        </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la tienda *</label>

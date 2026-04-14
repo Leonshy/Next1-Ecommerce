@@ -22,56 +22,58 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-// ─── Públicas ─────────────────────────────────────────────────────────────────
-Route::get('/', [HomeController::class, 'index'])->name('home');
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+// Auth va antes que las públicas para que el login esté disponible en mantenimiento
+require __DIR__ . '/auth.php';
 
-// Productos
-Route::get('/productos', [ProductController::class, 'index'])->name('products.index');
-Route::get('/productos/{slug}', [ProductController::class, 'show'])->name('products.show');
-Route::get('/api/search', [ProductController::class, 'search'])->name('products.search');
+// ─── Públicas (con middleware de mantenimiento) ────────────────────────────────
+Route::middleware('maintenance')->group(function () {
 
-// Páginas estáticas
-Route::get('/quienes-somos', [PageController::class, 'aboutUs'])->name('about');
-Route::get('/preguntas-frecuentes', [PageController::class, 'faq'])->name('faq');
-Route::get('/terminos-y-condiciones', [PageController::class, 'terms'])->name('terms');
-Route::get('/politicas-de-privacidad', [PageController::class, 'privacy'])->name('privacy');
-Route::get('/gift-cards', [PageController::class, 'giftCards'])->name('gift-cards');
+    Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// Checkout
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
-Route::post('/checkout/shipping', [CheckoutController::class, 'calculateShipping'])->name('checkout.shipping');
-Route::get('/checkout/confirmacion/{orderId}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
+    // Productos
+    Route::get('/productos', [ProductController::class, 'index'])->name('products.index');
+    Route::get('/productos/{slug}', [ProductController::class, 'show'])->name('products.show');
+    Route::get('/api/search', [ProductController::class, 'search'])->name('products.search');
 
-// Webhook Bancard (público, sin CSRF)
+    // Páginas estáticas
+    Route::get('/quienes-somos', [PageController::class, 'aboutUs'])->name('about');
+    Route::get('/preguntas-frecuentes', [PageController::class, 'faq'])->name('faq');
+    Route::get('/terminos-y-condiciones', [PageController::class, 'terms'])->name('terms');
+    Route::get('/politicas-de-privacidad', [PageController::class, 'privacy'])->name('privacy');
+    Route::get('/gift-cards', [PageController::class, 'giftCards'])->name('gift-cards');
+
+    // Checkout
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout/shipping', [CheckoutController::class, 'calculateShipping'])->name('checkout.shipping');
+    Route::get('/checkout/confirmacion/{orderId}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
+
+    // Mi Cuenta (también bloqueada en mantenimiento para usuarios no admin)
+    Route::middleware('auth')->prefix('mi-cuenta')->name('account.')->group(function () {
+        Route::get('/', [AccountController::class, 'index'])->name('index');
+        Route::get('/pedidos', [AccountController::class, 'orders'])->name('orders');
+        Route::get('/pedidos/{orderNumber}', [AccountController::class, 'orderShow'])->name('order.show');
+        Route::get('/direcciones', [AccountController::class, 'addresses'])->name('addresses');
+        Route::post('/direcciones', [AccountController::class, 'storeAddress'])->name('addresses.store');
+        Route::delete('/direcciones/{id}', [AccountController::class, 'deleteAddress'])->name('addresses.delete');
+        Route::get('/lista-de-deseos', [AccountController::class, 'wishlist'])->name('wishlist');
+        Route::post('/wishlist/{productId}', [AccountController::class, 'toggleWishlist'])->name('wishlist.toggle');
+        Route::patch('/perfil', [AccountController::class, 'updateProfile'])->name('profile.update');
+        Route::get('/configuracion', [ProfileController::class, 'edit'])->name('profile.edit');
+    });
+
+    Route::middleware('auth')->prefix('mi-cuenta')->group(function () {
+        Route::patch('/configuracion', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/configuracion', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    });
+
+});
+
+// Webhook Bancard (público, sin CSRF, sin mantenimiento)
 Route::post('/webhooks/bancard', [CheckoutController::class, 'bancardWebhook'])
     ->name('webhooks.bancard')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
-
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-require __DIR__ . '/auth.php';
-
-// ─── Mi Cuenta ────────────────────────────────────────────────────────────────
-Route::middleware('auth')->prefix('mi-cuenta')->name('account.')->group(function () {
-    Route::get('/', [AccountController::class, 'index'])->name('index');
-    Route::get('/pedidos', [AccountController::class, 'orders'])->name('orders');
-    Route::get('/pedidos/{orderNumber}', [AccountController::class, 'orderShow'])->name('order.show');
-    Route::get('/direcciones', [AccountController::class, 'addresses'])->name('addresses');
-    Route::post('/direcciones', [AccountController::class, 'storeAddress'])->name('addresses.store');
-    Route::delete('/direcciones/{id}', [AccountController::class, 'deleteAddress'])->name('addresses.delete');
-    Route::get('/lista-de-deseos', [AccountController::class, 'wishlist'])->name('wishlist');
-    Route::post('/wishlist/{productId}', [AccountController::class, 'toggleWishlist'])->name('wishlist.toggle');
-    Route::patch('/perfil', [AccountController::class, 'updateProfile'])->name('profile.update');
-
-    // Breeze profile (link only, rutas con nombre propio abajo)
-    Route::get('/configuracion', [ProfileController::class, 'edit'])->name('profile.edit');
-});
-
-// Breeze profile routes — fuera del grupo account. para mantener nombres que esperan las vistas
-Route::middleware('auth')->prefix('mi-cuenta')->group(function () {
-    Route::patch('/configuracion', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/configuracion', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin,vendedor'])->prefix('admin')->name('admin.')->group(function () {
@@ -182,5 +184,12 @@ Route::middleware(['auth', 'role:admin,vendedor'])->prefix('admin')->name('admin
 
         Route::get('hcaptcha', [AdminSettingsController::class, 'hcaptcha'])->name('hcaptcha');
         Route::post('hcaptcha', [AdminSettingsController::class, 'updateHcaptcha'])->name('hcaptcha.update');
+
+        Route::get('mantenimiento',  [AdminSettingsController::class, 'maintenance'])->name('maintenance');
+        Route::post('mantenimiento', [AdminSettingsController::class, 'updateMaintenance'])->name('maintenance.update');
+        Route::get('mantenimiento/preview', fn() => view('maintenance', [
+            'message'        => \App\Models\SiteContent::getByKey('maintenance')?->metadata['message'] ?? 'Estamos en mantenimiento.',
+            'estimated_time' => \App\Models\SiteContent::getByKey('maintenance')?->metadata['estimated_time'] ?? '',
+        ]))->name('maintenance.preview');
     });
 });

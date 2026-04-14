@@ -7,9 +7,14 @@
 
     @php
         $seo = \App\Models\SeoSetting::forPage($seoPage ?? 'global');
+        $storeInfo = \App\Models\SiteContent::getByKey('store_info')?->metadata ?? [];
     @endphp
 
     <title>{{ $seo?->meta_title ?? $title ?? config('app.name') }}</title>
+
+    @if(!empty($storeInfo['faviconUrl']))
+        <link rel="icon" href="{{ $storeInfo['faviconUrl'] }}">
+    @endif
 
     @if($seo?->meta_description)
         <meta name="description" content="{{ $seo->meta_description }}">

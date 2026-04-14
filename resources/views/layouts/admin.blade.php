@@ -242,7 +242,8 @@
                         ['route' => 'admin.settings.seo',       'match' => 'admin.settings.seo*',      'label' => 'SEO'],
                         ['route' => 'admin.settings.analytics', 'match' => 'admin.settings.analytics', 'label' => 'Analytics'],
                         ['route' => 'admin.settings.email',     'match' => 'admin.settings.email',     'label' => 'Email SMTP'],
-                        ['route' => 'admin.settings.hcaptcha',  'match' => 'admin.settings.hcaptcha',  'label' => 'hCaptcha'],
+                        ['route' => 'admin.settings.hcaptcha',    'match' => 'admin.settings.hcaptcha',     'label' => 'hCaptcha'],
+                        ['route' => 'admin.settings.maintenance', 'match' => 'admin.settings.maintenance*', 'label' => 'Mantenimiento'],
                     ] as $item)
                         <a href="{{ route($item['route']) }}"
                            class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors {{ request()->routeIs($item['match']) ? 'sidebar-child-active' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50' }}">

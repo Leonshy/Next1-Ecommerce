@@ -174,4 +174,36 @@ class AdminSettingsController extends Controller
         ]));
         return back()->with('success', 'hCaptcha actualizado.');
     }
+
+    // ── Mantenimiento ─────────────────────────────────────────────────────────
+    public function maintenance()
+    {
+        $record = \App\Models\SiteContent::getByKey('maintenance');
+        $data   = $record?->metadata ?? ['is_active' => false, 'message' => '', 'estimated_time' => ''];
+        return view('admin.settings.maintenance', compact('data'));
+    }
+
+    public function updateMaintenance(Request $request)
+    {
+        $request->validate([
+            'message'        => 'nullable|string|max:300',
+            'estimated_time' => 'nullable|string|max:100',
+        ]);
+
+        $metadata = [
+            'is_active'      => $request->boolean('is_active'),
+            'message'        => $request->input('message', 'Estamos realizando tareas de mantenimiento. Volvemos pronto.'),
+            'estimated_time' => $request->input('estimated_time', ''),
+        ];
+
+        \App\Models\SiteContent::updateOrCreate(
+            ['key' => 'maintenance'],
+            ['title' => 'Modo Mantenimiento', 'metadata' => $metadata, 'updated_by' => auth()->id()]
+        );
+
+        \Illuminate\Support\Facades\Cache::forget('maintenance_mode');
+
+        $status = $metadata['is_active'] ? 'activado' : 'desactivado';
+        return back()->with('success', "Modo mantenimiento $status correctamente.");
+    }
 }
