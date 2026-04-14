@@ -8,7 +8,7 @@
                 {{-- Category Sidebar (3/12 cols on lg) --}}
                 <div class="hidden lg:block col-span-3 h-[400px] overflow-visible relative z-20"
                      x-data="{ hovered: null }">
-                    <div class="bg-white border border-border h-full flex flex-col overflow-visible">
+                    <div class="bg-white rounded-xl shadow-[var(--shadow-card)] h-full flex flex-col overflow-visible">
                         {{-- Header --}}
                         <div class="bg-primary text-white p-4 flex items-center justify-between">
                             <div class="flex items-center gap-3">
@@ -32,7 +32,7 @@
                                     {{-- Submenu --}}
                                     @if($cat->children_count > 0)
                                         <div x-show="open" x-transition
-                                             class="absolute left-full top-0 bg-white border border-border shadow-soft z-[100] min-w-[220px] rounded-r">
+                                             class="absolute left-full top-0 bg-white shadow-[var(--shadow-soft)] z-[100] min-w-[220px] rounded-xl">
                                             <div class="bg-primary/10 text-primary p-3 border-b border-border">
                                                 <h4 class="font-semibold text-sm uppercase">{{ $cat->name }}</h4>
                                             </div>
@@ -147,7 +147,7 @@
                                       style="clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
                             </h2>
                             {{-- Countdown --}}
-                            <div class="flex items-center gap-2 bg-white px-4 py-2 border-b-2 border-border -mb-0.5"
+                            <div class="flex items-center gap-2 bg-white px-4 py-2 border-b-2 border-transparent -mb-0.5"
                                  x-data="{
                                     h:'00', m:'00', s:'00',
                                     tick(){
@@ -213,7 +213,7 @@
                 {{-- ── MÁS VENDIDOS (3/12 cols) ── --}}
                 @if($bestSellers->count())
                 <div class="col-span-12 lg:col-span-3">
-                    <div class="bg-white border border-border rounded-lg overflow-hidden"
+                    <div class="bg-white rounded-xl shadow-[var(--shadow-card)] overflow-hidden"
                          x-data="{ page: 0, perPage: 4, total: {{ $bestSellers->count() }} }">
 
                         {{-- Header con flecha --}}
@@ -370,7 +370,7 @@
                             }
                         @endphp
                         <a href="{{ $banner->button_link }}"
-                           class="promo-banner relative h-32 overflow-hidden group cursor-pointer block"
+                           class="promo-banner relative h-32 overflow-hidden group cursor-pointer block rounded-xl shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-soft)] transition-shadow duration-300"
                            style="{{ $bgStyle }}">
                             <div class="absolute inset-0 p-4 flex flex-col justify-center z-10"
                                  style="color:{{ $banner->text_color ?? 'white' }}">
@@ -426,10 +426,10 @@
 
                 {{-- ── MARCAS (3/12 cols) ── --}}
                 <div class="col-span-12 lg:col-span-3">
-                    <div class="bg-white border border-border rounded-lg overflow-hidden">
+                    <div class="bg-white rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
 
                         {{-- Header --}}
-                        <div class="border-b-2 border-border">
+                        <div class="border-b border-border">
                             <h2 class="bg-primary text-white font-bold text-sm uppercase px-6 py-3 relative inline-block">
                                 MARCAS
                                 <span class="absolute -right-3 top-0 h-full w-3 bg-primary"

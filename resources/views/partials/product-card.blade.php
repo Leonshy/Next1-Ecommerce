@@ -3,7 +3,7 @@
     $discountPct = $product->discount_percent ?? 0;
 @endphp
 
-<div class="bg-card border border-border hover:shadow-soft transition-all duration-300 overflow-hidden group relative">
+<div class="bg-card rounded-xl shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-soft)] hover:-translate-y-0.5 transition-all duration-300 overflow-hidden group relative">
 
     {{-- Badge top-left: prioridad Oferta > Destacado > Nuevo > Personalizado --}}
     <div class="absolute top-3 left-3 z-10">
@@ -27,7 +27,7 @@
 
     {{-- Imagen --}}
     <a href="{{ route('products.show', $product->slug) }}" class="block">
-        <div class="relative aspect-square overflow-hidden bg-background p-4">
+        <div class="relative aspect-square overflow-hidden bg-white p-4">
             <img src="{{ $img ?? 'https://placehold.co/400x400/e8f0fe/1a537a?text='.urlencode(mb_substr($product->name, 0, 12)) }}"
                  alt="{{ $product->name }}"
                  class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"

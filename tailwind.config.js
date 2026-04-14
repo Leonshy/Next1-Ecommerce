@@ -46,7 +46,7 @@ export default {
                     DEFAULT: 'hsl(0, 0%, 100%)',
                     foreground: 'hsl(207, 60%, 28%)',
                 },
-                background: 'hsl(0, 0%, 100%)',
+                background: '#fafbfc',
                 foreground: 'hsl(207, 60%, 28%)',
             },
             boxShadow: {

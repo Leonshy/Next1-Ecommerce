@@ -11,6 +11,12 @@ use App\Models\ProductImage;
 use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class AdminProductController extends Controller
 {
@@ -85,44 +91,72 @@ class AdminProductController extends Controller
         return redirect()->route('admin.productos.index')->with('success', 'Producto eliminado.');
     }
 
+    // ─── Bulk Actions ─────────────────────────────────────────────────────────
+
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:delete,activate,deactivate',
+            'ids'    => 'required|array|min:1',
+            'ids.*'  => 'string',
+        ]);
+
+        $ids    = $request->input('ids');
+        $action = $request->input('action');
+
+        switch ($action) {
+            case 'delete':
+                $count = Product::whereIn('id', $ids)->count();
+                Product::whereIn('id', $ids)->delete();
+                return back()->with('success', "{$count} producto(s) eliminado(s).");
+
+            case 'activate':
+                Product::whereIn('id', $ids)->update(['is_active' => true]);
+                return back()->with('success', count($ids) . " producto(s) activado(s).");
+
+            case 'deactivate':
+                Product::whereIn('id', $ids)->update(['is_active' => false]);
+                return back()->with('success', count($ids) . " producto(s) desactivado(s).");
+        }
+    }
+
     // ─── Import / Export ──────────────────────────────────────────────────────
 
     public function import(Request $request)
     {
-        $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
+        $request->validate(['file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240']);
 
-        $file    = $request->file('file');
-        $handle  = fopen($file->getRealPath(), 'r');
-        $headers = array_map('trim', fgetcsv($handle));
+        $file      = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        $rows      = $this->parseFile($file->getRealPath(), $extension);
+
+        if (empty($rows)) {
+            return back()->withErrors(['file' => 'El archivo está vacío o no tiene el formato correcto.']);
+        }
 
         $categories = Category::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id]);
         $brands     = Brand::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id]);
 
         $success = 0;
         $errors  = [];
-        $row     = 1;
+        $rowNum  = 1;
 
-        while (($values = fgetcsv($handle)) !== false) {
-            $row++;
-            $data = array_combine($headers, array_pad($values, count($headers), ''));
+        foreach ($rows as $data) {
+            $rowNum++;
 
             $name = trim($data['nombre'] ?? $data['name'] ?? '');
-            if (!$name) { $errors[] = "Fila {$row}: el campo 'nombre' es obligatorio."; continue; }
+            if (!$name) { $errors[] = "Fila {$rowNum}: el campo 'nombre' es obligatorio."; continue; }
 
             $price = (float) str_replace([',', ' '], '', $data['precio'] ?? $data['price'] ?? '0');
-            if ($price <= 0) { $errors[] = "Fila {$row}: precio inválido para \"{$name}\"."; continue; }
+            if ($price <= 0) { $errors[] = "Fila {$rowNum}: precio inválido para \"{$name}\"."; continue; }
 
-            $categoryName = strtolower(trim($data['categoria'] ?? $data['category'] ?? ''));
-            $brandName    = strtolower(trim($data['marca']     ?? $data['brand']    ?? ''));
-
+            $categoryName  = strtolower(trim($data['categoria']      ?? $data['category']     ?? ''));
+            $brandName     = strtolower(trim($data['marca']          ?? $data['brand']        ?? ''));
             $originalPrice = trim($data['precio_original'] ?? $data['original_price'] ?? '');
-
-            $tagsRaw = trim($data['etiquetas'] ?? $data['tags'] ?? '');
-            $tags    = $tagsRaw ? array_map('trim', explode(',', $tagsRaw)) : [];
-
-            $slug = $this->uniqueSlug(Str::slug($data['slug'] ?? $name));
-
-            $imageUrl = trim($data['imagen'] ?? $data['image'] ?? '');
+            $tagsRaw       = trim($data['etiquetas']       ?? $data['tags']           ?? '');
+            $tags          = $tagsRaw ? array_map('trim', explode(',', $tagsRaw)) : [];
+            $slug          = $this->uniqueSlug(Str::slug($data['slug'] ?? $name));
+            $imageUrl      = trim($data['imagen'] ?? $data['image'] ?? '');
 
             try {
                 $product = Product::create([
@@ -144,9 +178,7 @@ class AdminProductController extends Controller
                 ]);
 
                 if ($imageUrl) {
-                    // Buscar si la URL corresponde a un archivo de la biblioteca interna
                     $mediaFile = MediaFile::where('file_url', $imageUrl)->first();
-
                     ProductImage::create([
                         'product_id'    => $product->id,
                         'image_url'     => $mediaFile ? $mediaFile->file_url : $imageUrl,
@@ -158,13 +190,47 @@ class AdminProductController extends Controller
 
                 $success++;
             } catch (\Exception $e) {
-                $errors[] = "Fila {$row} (\"{$name}\"): " . $e->getMessage();
+                $errors[] = "Fila {$rowNum} (\"{$name}\"): " . $e->getMessage();
             }
         }
 
-        fclose($handle);
-
         return redirect()->route('admin.productos.index')->with('import_result', compact('success', 'errors'));
+    }
+
+    /** Parsea CSV o Excel y devuelve array de rows asociativas */
+    private function parseFile(string $path, string $extension): array
+    {
+        if (in_array($extension, ['xlsx', 'xls'])) {
+            $spreadsheet = IOFactory::load($path);
+            $sheet       = $spreadsheet->getActiveSheet();
+            $data        = $sheet->toArray(null, true, true, false);
+
+            if (empty($data)) return [];
+
+            $headers = array_map(fn($h) => strtolower(trim((string) $h)), array_shift($data));
+            $rows    = [];
+            foreach ($data as $row) {
+                $row = array_map(fn($v) => $v === null ? '' : (string) $v, $row);
+                if (implode('', $row) === '') continue; // saltar filas vacías
+                $rows[] = array_combine($headers, array_pad($row, count($headers), ''));
+            }
+            return $rows;
+        }
+
+        // CSV
+        $handle  = fopen($path, 'r');
+        // Strip UTF-8 BOM if present
+        $bom = fread($handle, 3);
+        if ($bom !== "\xEF\xBB\xBF") {
+            rewind($handle);
+        }
+        $headers = array_map(fn($h) => strtolower(trim($h)), fgetcsv($handle));
+        $rows    = [];
+        while (($values = fgetcsv($handle)) !== false) {
+            $rows[] = array_combine($headers, array_pad($values, count($headers), ''));
+        }
+        fclose($handle);
+        return $rows;
     }
 
     public function export()
@@ -212,33 +278,202 @@ class AdminProductController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
+    public function exportExcel()
+    {
+        $products = Product::with(['category', 'brand', 'mainImage', 'productImages'])->orderBy('name')->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet()->setTitle('Productos');
+
+        $columns = ['nombre','slug','descripcion','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen'];
+
+        foreach ($columns as $i => $col) {
+            $sheet->setCellValue(chr(65 + $i) . '1', $col);
+        }
+
+        $lastCol = chr(65 + count($columns) - 1);
+        $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1a4a6b']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(22);
+
+        foreach ($products as $rowIdx => $p) {
+            $row = $rowIdx + 2;
+            $values = [
+                $p->name,
+                $p->slug,
+                $p->description ?? '',
+                $p->price,
+                $p->original_price ?? '',
+                $p->sku ?? '',
+                $p->stock,
+                $p->category?->name ?? '',
+                $p->brand?->name    ?? '',
+                $p->badge           ?? '',
+                implode(', ', $p->tags ?? []),
+                $p->is_active   ? 'true' : 'false',
+                $p->is_featured ? 'true' : 'false',
+                $p->is_new      ? 'true' : 'false',
+                $p->is_hot_deal ? 'true' : 'false',
+                $p->mainImage?->image_url ?? $p->productImages->first()?->image_url ?? '',
+            ];
+            foreach ($values as $i => $val) {
+                $sheet->setCellValue(chr(65 + $i) . $row, $val);
+            }
+            if ($rowIdx % 2 === 1) {
+                $sheet->getStyle("A{$row}:{$lastCol}{$row}")->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'f8fafc']],
+                ]);
+            }
+        }
+
+        $widths = [20,20,35,12,15,10,8,15,12,10,20,8,10,8,8,35];
+        foreach ($widths as $i => $w) {
+            $sheet->getColumnDimension(chr(65 + $i))->setWidth($w);
+        }
+        $sheet->freezePane('A2');
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'productos_' . now()->format('Ymd_His') . '.xlsx';
+
+        return response()->stream(function () use ($writer) {
+            $writer->save('php://output');
+        }, 200, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control'       => 'max-age=0',
+        ]);
+    }
+
     public function template()
     {
         $category = Category::active()->first()?->name ?? 'Electrónica';
         $brand    = Brand::active()->first()?->name    ?? 'Samsung';
 
-        $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="plantilla_productos.csv"',
-        ];
-
-        $callback = function () use ($category, $brand) {
+        return response()->stream(function () use ($category, $brand) {
             $handle = fopen('php://output', 'w');
             fputs($handle, "\xEF\xBB\xBF");
-
             fputcsv($handle, ['nombre','slug','descripcion','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen']);
             fputcsv($handle, [
                 'Producto Ejemplo', 'producto-ejemplo', 'Descripción del producto',
                 '100000', '120000', 'SKU001', '10',
                 $category, $brand, 'NUEVO', 'etiqueta1, etiqueta2',
-                'true', 'false', 'true', 'false',
-                'https://ejemplo.com/imagen.jpg',
+                'true', 'false', 'true', 'false', 'https://ejemplo.com/imagen.jpg',
             ]);
-
             fclose($handle);
-        };
+        }, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="plantilla_productos.csv"',
+        ]);
+    }
 
-        return response()->stream($callback, 200, $headers);
+    public function templateExcel()
+    {
+        $category = Category::active()->first()?->name ?? 'Electrónica';
+        $brand    = Brand::active()->first()?->name    ?? 'Samsung';
+
+        $columns = ['nombre','slug','descripcion','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen'];
+        $sample  = [
+            'Producto Ejemplo', 'producto-ejemplo', 'Descripción del producto',
+            100000, 120000, 'SKU001', 10,
+            $category, $brand, 'NUEVO', 'etiqueta1, etiqueta2',
+            'true', 'false', 'true', 'false', 'https://ejemplo.com/imagen.jpg',
+        ];
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Productos');
+
+        // ── Encabezados ──
+        foreach ($columns as $i => $col) {
+            $cell = chr(65 + $i) . '1';
+            $sheet->setCellValue($cell, $col);
+        }
+
+        $lastCol = chr(65 + count($columns) - 1);
+
+        $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1a4a6b']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '2563a8']]],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(22);
+
+        // ── Fila de ejemplo ──
+        foreach ($sample as $i => $val) {
+            $sheet->setCellValue(chr(65 + $i) . '2', $val);
+        }
+
+        $sheet->getStyle("A2:{$lastCol}2")->applyFromArray([
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'f0f7ff']],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'd1e3f8']]],
+            'font' => ['color' => ['rgb' => '374151']],
+        ]);
+
+        // ── Hoja de instrucciones ──
+        $info = $spreadsheet->createSheet();
+        $info->setTitle('Instrucciones');
+        $info->setCellValue('A1', 'GUÍA DE CAMPOS');
+        $info->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1a4a6b']],
+        ]);
+
+        $guide = [
+            ['Campo', 'Obligatorio', 'Descripción', 'Ejemplo'],
+            ['nombre',         'Sí',  'Nombre del producto',                      'Mouse Gamer Pro'],
+            ['slug',           'No',  'URL amigable (se genera si está vacío)',    'mouse-gamer-pro'],
+            ['descripcion',    'No',  'Descripción larga del producto',            'Descripción detallada...'],
+            ['precio',         'Sí',  'Precio de venta (sin puntos ni comas)',     '150000'],
+            ['precio_original','No',  'Precio antes del descuento',               '180000'],
+            ['sku',            'No',  'Código interno del producto',               'MG-001'],
+            ['stock',          'No',  'Cantidad disponible',                       '25'],
+            ['categoria',      'No',  'Nombre exacto de la categoría',             $category],
+            ['marca',          'No',  'Nombre exacto de la marca',                 $brand],
+            ['badge',          'No',  'Etiqueta visual (ej: NUEVO, OFERTA)',       'NUEVO'],
+            ['etiquetas',      'No',  'Tags separados por coma',                   'gaming, periférico'],
+            ['activo',         'No',  'true / false',                              'true'],
+            ['destacado',      'No',  'true / false',                              'false'],
+            ['nuevo',          'No',  'true / false',                              'true'],
+            ['oferta',         'No',  'true / false',                              'false'],
+            ['imagen',         'No',  'URL de la imagen principal',               'https://ejemplo.com/img.jpg'],
+        ];
+
+        foreach ($guide as $r => $row) {
+            foreach ($row as $c => $val) {
+                $info->setCellValue(chr(65 + $c) . ($r + 2), $val);
+            }
+        }
+
+        $info->getStyle('A2:D2')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'e07b1d']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+
+        foreach (['A','B','C','D'] as $col) {
+            $info->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Anchos columnas hoja principal
+        $widths = [20,20,35,12,15,10,8,15,12,10,20,8,10,8,8,35];
+        foreach ($widths as $i => $w) {
+            $sheet->getColumnDimension(chr(65 + $i))->setWidth($w);
+        }
+
+        $sheet->freezePane('A2');
+
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->stream(function () use ($writer) {
+            $writer->save('php://output');
+        }, 200, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="plantilla_productos.xlsx"',
+            'Cache-Control'       => 'max-age=0',
+        ]);
     }
 
     private function validateProduct(Request $request): array

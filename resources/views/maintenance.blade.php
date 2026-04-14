@@ -279,6 +279,14 @@
 
     <footer class="footer">
         &copy; {{ date('Y') }} {{ $storeInfo['storeName'] ?? config('app.name') }} · Todos los derechos reservados
+        @auth
+        · <form method="POST" action="{{ route('logout') }}" style="display:inline">
+            @csrf
+            <button type="submit" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.35);font-size:.78rem;font-family:inherit;padding:0;" onmouseover="this.style.color='rgba(255,255,255,.7)'" onmouseout="this.style.color='rgba(255,255,255,.35)'">
+                Cerrar sesión
+            </button>
+          </form>
+        @endauth
     </footer>
 
 </body>

@@ -86,9 +86,12 @@ Route::middleware(['auth', 'role:admin,vendedor'])->prefix('admin')->name('admin
     });
 
     // Productos
-    Route::post('productos/import',    [AdminProductController::class, 'import'])->name('productos.import');
-    Route::get('productos/export',     [AdminProductController::class, 'export'])->name('productos.export');
-    Route::get('productos/template',   [AdminProductController::class, 'template'])->name('productos.template');
+    Route::post('productos/bulk',           [AdminProductController::class, 'bulkAction'])->name('productos.bulk');
+    Route::post('productos/import',         [AdminProductController::class, 'import'])->name('productos.import');
+    Route::get('productos/export',          [AdminProductController::class, 'export'])->name('productos.export');
+    Route::get('productos/export/excel',    [AdminProductController::class, 'exportExcel'])->name('productos.export.excel');
+    Route::get('productos/template/csv',    [AdminProductController::class, 'template'])->name('productos.template');
+    Route::get('productos/template/excel',  [AdminProductController::class, 'templateExcel'])->name('productos.template.excel');
     Route::resource('productos', AdminProductController::class)->except(['show']);
 
     // Categorías

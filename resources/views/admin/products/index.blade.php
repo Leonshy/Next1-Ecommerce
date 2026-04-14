@@ -53,17 +53,17 @@
     ══════════════════════════════════════════════════════════════════════════ --}}
     <div x-show="tab === 'productos'">
 
-        {{-- CSV Format Guide --}}
+        {{-- Import Guide --}}
         <div x-data="{ open: false }" class="mb-5 bg-blue-50 border border-blue-200 rounded-xl">
             <button @click="open = !open" class="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-blue-800">
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Guía de formato CSV para importación
+                    Guía de importación — formatos y columnas
                 </div>
                 <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
             <div x-show="open" x-transition class="px-4 pb-4 text-sm text-blue-900">
-                <p class="mb-3 text-blue-700">El archivo debe ser <strong>.csv</strong> con codificación <strong>UTF-8</strong>. La primera fila debe contener los encabezados. Podés usar la <strong>Plantilla</strong> del botón Exportar como punto de partida.</p>
+                <p class="mb-3 text-blue-700">Se aceptan archivos <strong>.csv</strong> (UTF-8) y <strong>.xlsx / .xls</strong> (Excel). La primera fila debe contener los encabezados exactos de la tabla siguiente.</p>
                 <div class="overflow-x-auto rounded-lg border border-blue-200">
                     <table class="w-full text-xs">
                         <thead class="bg-blue-100 text-blue-800">
@@ -106,6 +106,21 @@
                     </table>
                 </div>
                 <p class="mt-3 text-blue-700 text-xs">Los campos booleanos aceptan: <code class="bg-blue-100 px-1 rounded">true</code>, <code class="bg-blue-100 px-1 rounded">1</code>, <code class="bg-blue-100 px-1 rounded">si</code> para activar; <code class="bg-blue-100 px-1 rounded">false</code>, <code class="bg-blue-100 px-1 rounded">0</code>, <code class="bg-blue-100 px-1 rounded">no</code> para desactivar.</p>
+
+                {{-- Descargar plantillas --}}
+                <div class="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-blue-200">
+                    <span class="text-xs font-semibold text-blue-700 mr-1">Descargar plantilla:</span>
+                    <a href="{{ route('admin.productos.template') }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-blue-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Plantilla CSV
+                    </a>
+                    <a href="{{ route('admin.productos.template.excel') }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-blue-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Plantilla Excel (.xlsx)
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -118,15 +133,43 @@
             </form>
 
             <div class="flex items-center gap-2" x-data="{ exportOpen: false }">
-                {{-- Importar --}}
-                <button type="button" onclick="document.getElementById('csv-file-input').click()"
-                        class="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                    Importar CSV
-                </button>
-                <form id="import-form" method="POST" action="{{ route('admin.productos.import') }}" enctype="multipart/form-data" class="hidden">
+                {{-- Importar (dropdown CSV / Excel) --}}
+                <div class="relative" x-data="{ importOpen: false }">
+                    <button @click="importOpen = !importOpen" @click.outside="importOpen = false"
+                            class="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        Importar
+                        <svg class="w-3.5 h-3.5" :class="importOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="importOpen" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                         class="absolute left-0 mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1">
+
+                        {{-- Subir archivo --}}
+                        <p class="px-4 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Subir archivo</p>
+                        <button type="button" onclick="document.getElementById('file-input-csv').click()"
+                                class="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <span class="w-5 h-5 rounded text-xs font-bold flex items-center justify-center bg-green-100 text-green-700">CSV</span>
+                            Importar desde CSV
+                        </button>
+                        <button type="button" onclick="document.getElementById('file-input-excel').click()"
+                                class="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <span class="w-5 h-5 rounded text-xs font-bold flex items-center justify-center bg-emerald-100 text-emerald-700">XLS</span>
+                            Importar desde Excel
+                        </button>
+
+                        <hr class="my-1 border-gray-100">
+
+                    </div>
+                </div>
+
+                {{-- Forms ocultos de importación (uno por formato) --}}
+                <form method="POST" action="{{ route('admin.productos.import') }}" enctype="multipart/form-data" class="hidden">
                     @csrf
-                    <input id="csv-file-input" type="file" name="file" accept=".csv,text/csv" onchange="document.getElementById('import-form').submit()">
+                    <input id="file-input-csv" type="file" name="file" accept=".csv,text/csv" onchange="this.form.submit()">
+                </form>
+                <form method="POST" action="{{ route('admin.productos.import') }}" enctype="multipart/form-data" class="hidden">
+                    @csrf
+                    <input id="file-input-excel" type="file" name="file" accept=".xlsx,.xls" onchange="this.form.submit()">
                 </form>
 
                 {{-- Exportar (dropdown) --}}
@@ -139,12 +182,12 @@
                     <div x-show="exportOpen" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                          class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1">
                         <a href="{{ route('admin.productos.export') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span class="w-5 h-5 rounded text-xs font-bold flex items-center justify-center bg-green-100 text-green-700">CSV</span>
                             Exportar CSV
                         </a>
-                        <a href="{{ route('admin.productos.template') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            Descargar Plantilla
+                        <a href="{{ route('admin.productos.export.excel') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <span class="w-5 h-5 rounded text-xs font-bold flex items-center justify-center bg-emerald-100 text-emerald-700">XLS</span>
+                            Exportar Excel
                         </a>
                     </div>
                 </div>
@@ -156,84 +199,162 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wide">
-                    <tr>
-                        <th class="px-5 py-3 text-left">Producto</th>
-                        <th class="px-5 py-3 text-left">Precio</th>
-                        <th class="px-5 py-3 text-left">Stock</th>
-                        <th class="px-5 py-3 text-left">Estado</th>
-                        <th class="px-5 py-3 text-left">Categoría</th>
-                        <th class="px-5 py-3"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    @forelse($products as $product)
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-5 py-3">
-                                <div class="flex items-center gap-3">
-                                    @if($img = ($product->mainImage?->image_url ?? ($product->images[0] ?? null)))
-                                        <img src="{{ $img }}" alt="{{ $product->name }}" class="w-11 h-11 object-cover rounded-lg bg-gray-100 shrink-0">
-                                    @else
-                                        <div class="w-11 h-11 bg-gray-100 rounded-lg shrink-0 flex items-center justify-center">
-                                            <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        </div>
-                                    @endif
-                                    <div class="min-w-0">
-                                        <p class="font-medium text-gray-900 truncate">{{ $product->name }}</p>
-                                        @if($product->sku)
-                                            <p class="text-xs text-gray-400">SKU: {{ $product->sku }}</p>
-                                        @endif
-                                        @if(!empty($product->tags))
-                                            <div class="flex flex-wrap gap-1 mt-1">
-                                                @foreach(array_slice($product->tags, 0, 3) as $tag)
-                                                    <span class="text-[10px] px-1.5 py-0.5 rounded-full border border-gray-200 text-gray-500">#{{ $tag }}</span>
-                                                @endforeach
-                                                @if(count($product->tags) > 3)
-                                                    <span class="text-[10px] px-1.5 py-0.5 rounded-full border border-gray-200 text-gray-500">+{{ count($product->tags) - 3 }}</span>
-                                                @endif
+        {{-- Tabla con selección múltiple --}}
+        <div x-data="{
+                selected: [],
+                allIds: {{ $products->pluck('id')->toJson() }},
+                get allSelected() { return this.allIds.length > 0 && this.selected.length === this.allIds.length; },
+                get someSelected() { return this.selected.length > 0 && !this.allSelected; },
+                toggleAll() { this.selected = this.allSelected ? [] : [...this.allIds]; },
+                bulkAction: '',
+                confirmBulk(action) {
+                    if (this.selected.length === 0) return;
+                    const labels = { delete: 'eliminar', activate: 'activar', deactivate: 'desactivar' };
+                    if (!confirm(`¿Seguro que querés ${labels[action]} ${this.selected.length} producto(s)?`)) return;
+                    this.bulkAction = action;
+                    this.$nextTick(() => this.$refs.bulkForm.submit());
+                }
+             }">
+
+            {{-- Barra de acciones flotante --}}
+            <div x-show="selected.length > 0"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 translate-y-2"
+                 class="sticky top-4 z-30 mb-3">
+                <div class="flex items-center justify-between gap-3 bg-gray-900 text-white rounded-xl px-4 py-3 shadow-xl">
+                    <div class="flex items-center gap-3">
+                        <span class="flex items-center justify-center w-6 h-6 bg-white text-gray-900 rounded-md text-xs font-bold" x-text="selected.length"></span>
+                        <span class="text-sm font-medium" x-text="`producto${selected.length !== 1 ? 's' : ''} seleccionado${selected.length !== 1 ? 's' : ''}`"></span>
+                        <button @click="selected = []" class="text-gray-400 hover:text-white transition-colors ml-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="confirmBulk('activate')"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-500 hover:bg-green-400 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Activar
+                        </button>
+                        <button @click="confirmBulk('deactivate')"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-600 hover:bg-gray-500 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                            Desactivar
+                        </button>
+                        <button @click="confirmBulk('delete')"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500 hover:bg-red-400 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Form oculto para acciones en lote --}}
+            <form x-ref="bulkForm" method="POST" action="{{ route('admin.productos.bulk') }}" class="hidden">
+                @csrf
+                <input type="hidden" name="action" :value="bulkAction">
+                <template x-for="id in selected" :key="id">
+                    <input type="hidden" name="ids[]" :value="id">
+                </template>
+            </form>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wide">
+                        <tr>
+                            <th class="pl-4 pr-2 py-3 w-8">
+                                <input type="checkbox"
+                                       :checked="allSelected"
+                                       :indeterminate="someSelected"
+                                       @change="toggleAll()"
+                                       class="rounded border-gray-300 text-gray-900 cursor-pointer">
+                            </th>
+                            <th class="px-4 py-3 text-left">Producto</th>
+                            <th class="px-4 py-3 text-left">Precio</th>
+                            <th class="px-4 py-3 text-left">Stock</th>
+                            <th class="px-4 py-3 text-left">Estado</th>
+                            <th class="px-4 py-3 text-left">Categoría</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @forelse($products as $product)
+                            <tr class="transition-colors"
+                                :class="selected.includes('{{ $product->id }}') ? 'bg-blue-50' : 'hover:bg-gray-50'">
+                                <td class="pl-4 pr-2 py-3 w-8">
+                                    <input type="checkbox"
+                                           value="{{ $product->id }}"
+                                           x-model="selected"
+                                           class="rounded border-gray-300 text-gray-900 cursor-pointer">
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        @if($img = ($product->mainImage?->image_url ?? ($product->images[0] ?? null)))
+                                            <img src="{{ $img }}" alt="{{ $product->name }}" class="w-11 h-11 object-cover rounded-lg bg-gray-100 shrink-0">
+                                        @else
+                                            <div class="w-11 h-11 bg-gray-100 rounded-lg shrink-0 flex items-center justify-center">
+                                                <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                             </div>
                                         @endif
+                                        <div class="min-w-0">
+                                            <p class="font-medium text-gray-900 truncate">{{ $product->name }}</p>
+                                            @if($product->sku)
+                                                <p class="text-xs text-gray-400">SKU: {{ $product->sku }}</p>
+                                            @endif
+                                            @if(!empty($product->tags))
+                                                <div class="flex flex-wrap gap-1 mt-1">
+                                                    @foreach(array_slice($product->tags, 0, 3) as $tag)
+                                                        <span class="text-[10px] px-1.5 py-0.5 rounded-full border border-gray-200 text-gray-500">#{{ $tag }}</span>
+                                                    @endforeach
+                                                    @if(count($product->tags) > 3)
+                                                        <span class="text-[10px] px-1.5 py-0.5 rounded-full border border-gray-200 text-gray-500">+{{ count($product->tags) - 3 }}</span>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="px-5 py-3">
-                                <p class="font-semibold text-gray-900">Gs. {{ $product->formatted_price }}</p>
-                                @if($product->formatted_original_price)
-                                    <p class="text-xs text-gray-400 line-through">Gs. {{ $product->formatted_original_price }}</p>
-                                @endif
-                            </td>
-                            <td class="px-5 py-3">
-                                <span class="font-medium {{ $product->stock > 0 ? 'text-green-600' : 'text-red-500' }}">{{ $product->stock }}</span>
-                            </td>
-                            <td class="px-5 py-3">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $product->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
-                                    {{ $product->is_active ? 'Activo' : 'Inactivo' }}
-                                </span>
-                            </td>
-                            <td class="px-5 py-3 text-gray-500 text-sm">{{ $product->category?->name ?? '—' }}</td>
-                            <td class="px-5 py-3">
-                                <div class="flex items-center justify-end gap-2">
-                                    <a href="{{ route('admin.productos.edit', $product->id) }}" class="text-xs font-medium hover:underline" style="color:#1a4a6b">Editar</a>
-                                    <form method="POST" action="{{ route('admin.productos.destroy', $product->id) }}" onsubmit="return confirm('¿Eliminar este producto?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-xs font-medium text-red-500 hover:underline">Eliminar</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="px-5 py-12 text-center text-gray-400">
-                                <svg class="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg>
-                                No hay productos
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-            <div class="p-4 border-t border-gray-100">{{ $products->links() }}</div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <p class="font-semibold text-gray-900">Gs. {{ $product->formatted_price }}</p>
+                                    @if($product->formatted_original_price)
+                                        <p class="text-xs text-gray-400 line-through">Gs. {{ $product->formatted_original_price }}</p>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="font-medium {{ $product->stock > 0 ? 'text-green-600' : 'text-red-500' }}">{{ $product->stock }}</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $product->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
+                                        {{ $product->is_active ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-gray-500 text-sm">{{ $product->category?->name ?? '—' }}</td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href="{{ route('admin.productos.edit', $product->id) }}" class="text-xs font-medium hover:underline" style="color:#1a4a6b">Editar</a>
+                                        <form method="POST" action="{{ route('admin.productos.destroy', $product->id) }}" onsubmit="return confirm('¿Eliminar este producto?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-xs font-medium text-red-500 hover:underline">Eliminar</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-5 py-12 text-center text-gray-400">
+                                    <svg class="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg>
+                                    No hay productos
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+                <div class="p-4 border-t border-gray-100">{{ $products->links() }}</div>
+            </div>
         </div>
     </div>{{-- /tab productos --}}
 

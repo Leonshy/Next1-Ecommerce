@@ -35,7 +35,7 @@
 
     {!! \App\Services\AnalyticsService::getScripts() !!}
 </head>
-<body class="font-sans antialiased bg-white text-gray-900">
+<body class="font-sans antialiased bg-background text-foreground">
 
     @include('partials.header')
 
