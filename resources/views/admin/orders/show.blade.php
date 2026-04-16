@@ -54,10 +54,30 @@
             <form method="POST" action="{{ route('admin.pedidos.status', $order->id) }}">
                 @csrf @method('PATCH')
                 <select name="status" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    @foreach(['pendiente','confirmado','procesando','enviado','entregado','cancelado'] as $s)
-                        <option value="{{ $s }}" {{ $order->status === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
+                    @foreach([
+                        'pendiente'               => 'Pendiente',
+                        'pendiente_transferencia' => 'Pend. Transferencia',
+                        'confirmado'              => 'Confirmado',
+                        'procesando'              => 'Procesando',
+                        'enviado'                 => 'Enviado',
+                        'entregado'               => 'Entregado',
+                        'cancelado'               => 'Cancelado',
+                    ] as $val => $label)
+                        <option value="{{ $val }}" {{ $order->status === $val ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
                 </select>
+
+                @if($order->transfer_receipt)
+                <div class="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <p class="text-xs font-semibold text-orange-700 mb-1">Comprobante de transferencia:</p>
+                    <a href="{{ Storage::url($order->transfer_receipt) }}" target="_blank"
+                       class="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Ver / Descargar comprobante
+                    </a>
+                </div>
+                @endif
+
                 <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
                     Actualizar Estado
                 </button>

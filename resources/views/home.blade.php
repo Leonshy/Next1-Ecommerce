@@ -6,45 +6,59 @@
             <div class="grid grid-cols-12 gap-0">
 
                 {{-- Category Sidebar (3/12 cols on lg) --}}
-                <div class="hidden lg:block col-span-3 h-[400px] overflow-visible relative z-20"
-                     x-data="{ hovered: null }">
-                    <div class="bg-white rounded-xl shadow-[var(--shadow-card)] h-full flex flex-col overflow-visible">
+                <div class="hidden lg:block col-span-3 h-[400px] relative z-20">
+                    <div class="bg-white rounded-xl shadow-[var(--shadow-card)] h-full flex flex-col overflow-hidden">
                         {{-- Header --}}
-                        <div class="bg-primary text-white p-4 flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                                <h3 class="font-bold text-sm uppercase">Categorías</h3>
-                            </div>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                        <div class="bg-primary text-white p-4 flex items-center gap-3 flex-shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                            <h3 class="font-bold text-sm uppercase">Categorías</h3>
                         </div>
                         {{-- List --}}
-                        <div class="divide-y divide-border flex-1 overflow-y-auto overflow-x-visible">
+                        <div class="divide-y divide-border flex-1 overflow-y-auto">
                             @foreach($categories as $cat)
-                                <div class="relative" x-data="{ open: false }"
-                                     @mouseenter="open = true" @mouseleave="open = false">
-                                    <a href="{{ route('products.index', ['categoria' => $cat->slug]) }}"
-                                       class="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors text-sm text-foreground uppercase tracking-wide group block">
-                                        <span>{{ $cat->name }}</span>
-                                        @if($cat->children_count > 0)
-                                            <svg class="w-4 h-4 text-muted-foreground group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                        @endif
-                                    </a>
-                                    {{-- Submenu --}}
-                                    @if($cat->children_count > 0)
-                                        <div x-show="open" x-transition
-                                             class="absolute left-full top-0 bg-white shadow-[var(--shadow-soft)] z-[100] min-w-[220px] rounded-xl">
-                                            <div class="bg-primary/10 text-primary p-3 border-b border-border">
-                                                <h4 class="font-semibold text-sm uppercase">{{ $cat->name }}</h4>
+                                @if($cat->children_count > 0)
+                                    {{-- Con subcategorías: flyout fixed (escapa del overflow) --}}
+                                    <div x-data="{ open: false, top: 0, left: 0 }"
+                                         @mouseenter="open = true; const r = $el.getBoundingClientRect(); top = r.top; left = r.right"
+                                         @mouseleave="open = false">
+                                        <a href="{{ route('products.index', ['categoria' => $cat->slug]) }}"
+                                           class="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors text-sm text-foreground uppercase tracking-wide group block">
+                                            <span>{{ $cat->name }}</span>
+                                            <svg class="w-4 h-4 text-muted-foreground group-hover:text-primary flex-shrink-0"
+                                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                            </svg>
+                                        </a>
+                                        {{-- Flyout con position:fixed para escapar del overflow --}}
+                                        <div x-show="open"
+                                             x-transition:enter="transition ease-out duration-150"
+                                             x-transition:enter-start="opacity-0 translate-x-1"
+                                             x-transition:enter-end="opacity-100 translate-x-0"
+                                             :style="`position:fixed; top:${top}px; left:${left}px; z-index:9999`"
+                                             style="display:none"
+                                             class="bg-white shadow-[var(--shadow-soft)] rounded-xl min-w-[220px] overflow-hidden border border-border/40">
+                                            <div class="bg-primary/10 text-primary px-4 py-2.5 border-b border-border">
+                                                <h4 class="font-semibold text-xs uppercase">{{ $cat->name }}</h4>
                                             </div>
+                                            <a href="{{ route('products.index', ['categoria' => $cat->slug]) }}"
+                                               class="block px-4 py-2.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-primary transition-colors uppercase tracking-wide border-b border-border/40">
+                                                Ver todos
+                                            </a>
                                             @foreach($cat->children as $sub)
                                                 <a href="{{ route('products.index', ['categoria' => $sub->slug]) }}"
-                                                   class="block px-4 py-3 text-sm text-foreground hover:bg-muted/50 hover:text-primary transition-colors uppercase tracking-wide border-b border-border">
+                                                   class="block px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 hover:text-primary transition-colors uppercase tracking-wide border-b border-border/40">
                                                     {{ $sub->name }}
                                                 </a>
                                             @endforeach
                                         </div>
-                                    @endif
-                                </div>
+                                    </div>
+                                @else
+                                    {{-- Sin subcategorías: link directo --}}
+                                    <a href="{{ route('products.index', ['categoria' => $cat->slug]) }}"
+                                       class="w-full px-4 py-3 flex items-center hover:bg-muted/50 transition-colors text-sm text-foreground uppercase tracking-wide block">
+                                        {{ $cat->name }}
+                                    </a>
+                                @endif
                             @endforeach
                         </div>
                     </div>

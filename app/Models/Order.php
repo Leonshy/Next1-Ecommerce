@@ -17,7 +17,7 @@ class Order extends Model
         'order_number', 'user_id', 'status', 'customer_name', 'customer_email',
         'customer_phone', 'shipping_address', 'shipping_city', 'subtotal',
         'discount', 'shipping_cost', 'total', 'notes', 'bancard_process_id',
-        'guest_access_token',
+        'guest_access_token', 'payment_method', 'transfer_receipt',
     ];
 
     protected $casts = [
@@ -69,26 +69,28 @@ class Order extends Model
     public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
-            'pendiente'   => 'Pendiente',
-            'confirmado'  => 'Confirmado',
-            'procesando'  => 'Procesando',
-            'enviado'     => 'Enviado',
-            'entregado'   => 'Entregado',
-            'cancelado'   => 'Cancelado',
-            default       => $this->status,
+            'pendiente'                => 'Pendiente',
+            'pendiente_transferencia'  => 'Pend. Transferencia',
+            'confirmado'               => 'Confirmado',
+            'procesando'               => 'Procesando',
+            'enviado'                  => 'Enviado',
+            'entregado'                => 'Entregado',
+            'cancelado'                => 'Cancelado',
+            default                    => $this->status,
         };
     }
 
     public function getStatusColorAttribute(): string
     {
         return match($this->status) {
-            'pendiente'  => 'yellow',
-            'confirmado' => 'blue',
-            'procesando' => 'purple',
-            'enviado'    => 'indigo',
-            'entregado'  => 'green',
-            'cancelado'  => 'red',
-            default      => 'gray',
+            'pendiente'               => 'yellow',
+            'pendiente_transferencia' => 'orange',
+            'confirmado'              => 'blue',
+            'procesando'              => 'purple',
+            'enviado'                 => 'indigo',
+            'entregado'               => 'green',
+            'cancelado'               => 'red',
+            default                   => 'gray',
         };
     }
 }

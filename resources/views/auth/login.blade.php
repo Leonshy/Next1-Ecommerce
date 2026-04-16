@@ -5,12 +5,18 @@
     <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
 
         {{-- Header --}}
+        @php $storeInfo = \App\Models\SiteContent::getByKey('store_info')?->metadata ?? []; @endphp
         <div class="px-8 pt-8 pb-4 text-center">
-            <a href="{{ route('home') }}" class="inline-flex items-center gap-2 mb-4">
-                <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                    <span class="text-white font-black text-sm">N1</span>
-                </div>
-                <span class="text-primary font-black text-2xl tracking-tight">NEXT1</span>
+            <a href="{{ route('home') }}" class="inline-flex items-center justify-center gap-2 mb-4">
+                @if(!empty($storeInfo['logoUrl']))
+                    <img src="{{ $storeInfo['logoUrl'] }}" alt="{{ $storeInfo['storeName'] ?? config('app.name') }}"
+                         class="h-10 w-auto object-contain">
+                @else
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <span class="text-white font-black text-sm">N1</span>
+                    </div>
+                    <span class="text-primary font-black text-2xl tracking-tight">{{ $storeInfo['storeName'] ?? config('app.name') }}</span>
+                @endif
             </a>
             <h1 class="text-2xl font-bold text-gray-900">Bienvenido</h1>
             <p class="text-sm text-gray-500 mt-1">Inicia sesión o crea una cuenta para continuar</p>

@@ -120,13 +120,59 @@
         <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
             <h2 class="font-semibold text-gray-900">Método de pago</h2>
 
-            <label class="flex items-center space-x-3 p-4 border rounded-xl cursor-pointer {{ $paymentMethod === 'bancard' ? 'border-blue-600 bg-blue-50' : 'border-gray-200' }}">
-                <input type="radio" wire:model="paymentMethod" value="bancard" class="text-blue-600">
-                <div>
-                    <p class="font-medium text-sm">💳 Bancard (Tarjeta de crédito/débito)</p>
-                    <p class="text-xs text-gray-500">Visa, Mastercard</p>
+            @error('general')
+                <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{{ $message }}</div>
+            @enderror
+
+            {{-- Métodos de pago disponibles (dinámico según config admin) --}}
+            @forelse($availablePayments as $key => $label)
+                @php
+                    $icons = ['bancard' => '💳', 'transferencia' => '🏦'];
+                    $subs  = ['bancard' => 'Visa, Mastercard', 'transferencia' => 'Subí tu comprobante al finalizar'];
+                @endphp
+                <label class="flex items-center space-x-3 p-4 border rounded-xl cursor-pointer {{ $paymentMethod === $key ? 'border-blue-600 bg-blue-50' : 'border-gray-200' }}">
+                    <input type="radio" wire:model.live="paymentMethod" value="{{ $key }}" class="text-blue-600">
+                    <div>
+                        <p class="font-medium text-sm">{{ $icons[$key] ?? '💰' }} {{ $label }}</p>
+                        <p class="text-xs text-gray-500">{{ $subs[$key] ?? '' }}</p>
+                    </div>
+                </label>
+            @empty
+                <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-700">
+                    No hay métodos de pago disponibles. Contactá al administrador.
                 </div>
-            </label>
+            @endforelse
+
+            {{-- Datos bancarios + comprobante (solo si elige transferencia) --}}
+            @if($paymentMethod === 'transferencia')
+            @php $transferSettings = \App\Models\SiteContent::getByKey('transfer_settings')?->metadata ?? []; @endphp
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+                <p class="text-sm font-semibold text-blue-800">Datos para la transferencia:</p>
+                @if(!empty($transferSettings))
+                    <div class="text-sm text-blue-700 space-y-1">
+                        @if(!empty($transferSettings['bank']))         <p><span class="font-medium">Banco:</span> {{ $transferSettings['bank'] }}</p>@endif
+                        @if(!empty($transferSettings['account_name'])) <p><span class="font-medium">Titular:</span> {{ $transferSettings['account_name'] }}</p>@endif
+                        @if(!empty($transferSettings['account_number']))<p><span class="font-medium">Cuenta:</span> {{ $transferSettings['account_number'] }}</p>@endif
+                        @if(!empty($transferSettings['ruc']))          <p><span class="font-medium">RUC:</span> {{ $transferSettings['ruc'] }}</p>@endif
+                        @if(!empty($transferSettings['extra']))        <p class="text-xs text-blue-600 mt-1">{{ $transferSettings['extra'] }}</p>@endif
+                    </div>
+                @else
+                    <p class="text-xs text-blue-600">Configurá los datos bancarios en Panel Admin → Configuración → Pagos.</p>
+                @endif
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Comprobante de transferencia <span class="text-red-500">*</span>
+                    </label>
+                    <input type="file" wire:model="transferReceipt"
+                           accept=".jpg,.jpeg,.png,.pdf"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700">
+                    <p class="text-xs text-gray-400 mt-1">Formatos aceptados: JPG, PNG, PDF. Máximo 5MB.</p>
+                    @error('transferReceipt') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    <div wire:loading wire:target="transferReceipt" class="text-xs text-gray-500 mt-1">Subiendo archivo...</div>
+                </div>
+            </div>
+            @endif
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
@@ -137,9 +183,13 @@
 
             <div class="flex justify-between">
                 <button wire:click="prevStep" class="text-gray-500 hover:text-gray-700 text-sm">← Volver</button>
-                <button onclick="submitOrder()"
-                        class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700">
-                    Confirmar Pedido
+                <button wire:click="placeOrder" wire:loading.attr="disabled" wire:target="placeOrder,transferReceipt"
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2">
+                    <span wire:loading.remove wire:target="placeOrder">Confirmar Pedido</span>
+                    <span wire:loading wire:target="placeOrder" class="flex items-center gap-2">
+                        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                        Procesando...
+                    </span>
                 </button>
             </div>
         </div>
@@ -184,39 +234,12 @@
 </div>
 
 <script>
-function submitOrder() {
-    // The form submission is handled via axios/fetch to the checkout store endpoint
-    const data = {
-        customer_name: @json($customerName),
-        customer_email: @json($customerEmail),
-        customer_phone: @json($customerPhone),
-        shipping_address: @json($shippingAddress),
-        shipping_city: @json($shippingCity),
-        shipping_cost: @json($shippingCost),
-        payment_method: @json($paymentMethod),
-        notes: @json($notes),
-        items: Object.values(@json(session('cart', []))).map(i => ({
-            product_id: i.id,
-            quantity: i.quantity,
-        })),
-    };
-
-    fetch('{{ route('checkout.store') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-        },
-        body: JSON.stringify(data),
-    })
-    .then(r => r.json())
-    .then(res => {
-        if (res.success && res.payment === 'bancard') {
-            // Show Bancard iframe
-            document.body.innerHTML += `<div style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;"><iframe src="${res.iframe_url}" style="width:460px;height:560px;border:none;border-radius:12px;"></iframe></div>`;
-        } else if (res.success) {
-            window.location.href = '/checkout/confirmacion/' + res.order_id;
-        }
-    });
-}
+// Listener para el pago Bancard (lanzado desde Livewire placeOrder)
+window.addEventListener('bancard:init', (e) => {
+    const url = e.detail.url;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `<iframe src="${url}" style="width:460px;height:560px;border:none;border-radius:12px;"></iframe>`;
+    document.body.appendChild(overlay);
+});
 </script>

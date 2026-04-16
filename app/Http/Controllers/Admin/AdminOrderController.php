@@ -39,7 +39,7 @@ class AdminOrderController extends Controller
     public function updateStatus(Request $request, string $id)
     {
         $request->validate([
-            'status' => 'required|in:pendiente,confirmado,procesando,enviado,entregado,cancelado',
+            'status' => 'required|in:pendiente,pendiente_transferencia,confirmado,procesando,enviado,entregado,cancelado',
         ]);
 
         $order = Order::findOrFail($id);

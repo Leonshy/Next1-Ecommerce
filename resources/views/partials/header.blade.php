@@ -53,15 +53,73 @@
                 </a>
 
                 {{-- Search --}}
+                @php
+                    $headerCategories = \App\Models\Category::active()->root()
+                        ->withCount('children')
+                        ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('display_order')])
+                        ->orderBy('display_order')->get();
+                @endphp
                 <div class="flex-1 flex justify-center">
                     <div class="flex w-full max-w-3xl h-10">
                         {{-- Category dropdown (solo desktop) --}}
-                        <div class="hidden md:flex items-stretch flex-shrink-0" x-data="{ open: false }">
+                        <div class="hidden md:flex items-stretch flex-shrink-0 relative" x-data="{ open: false }">
                             <button @click="open = !open" @click.away="open = false"
                                     class="flex items-center gap-1 rounded-l-full border border-r-0 border-border bg-muted px-4 text-sm text-foreground hover:bg-muted/80 transition-colors whitespace-nowrap">
                                 Categorías
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
                             </button>
+                            {{-- Dropdown principal --}}
+                            <div x-show="open"
+                                 x-transition:enter="transition ease-out duration-150"
+                                 x-transition:enter-start="opacity-0 -translate-y-1"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 class="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-[var(--shadow-soft)] z-50 border border-border/50 py-1"
+                                 style="display:none">
+                                @foreach($headerCategories as $cat)
+                                    @if($cat->children_count > 0)
+                                        {{-- Con subcategorías: flyout lateral --}}
+                                        <div class="relative"
+                                             x-data="{ sub: false }"
+                                             @mouseenter="sub = true"
+                                             @mouseleave="sub = false">
+                                            <a href="{{ route('products.index', ['categoria' => $cat->slug]) }}"
+                                               class="flex items-center justify-between px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 hover:text-primary transition-colors uppercase tracking-wide">
+                                                <span>{{ $cat->name }}</span>
+                                                <svg class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0"
+                                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                </svg>
+                                            </a>
+                                            {{-- Flyout lateral --}}
+                                            <div x-show="sub"
+                                                 x-transition:enter="transition ease-out duration-150"
+                                                 x-transition:enter-start="opacity-0 translate-x-1"
+                                                 x-transition:enter-end="opacity-100 translate-x-0"
+                                                 class="absolute left-full top-0 w-52 bg-white rounded-xl shadow-[var(--shadow-soft)] border border-border/50 py-1 z-[60]"
+                                                 style="display:none">
+                                                <a href="{{ route('products.index', ['categoria' => $cat->slug]) }}"
+                                                   class="block px-4 py-2.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-primary transition-colors uppercase tracking-wide">
+                                                    Ver todos
+                                                </a>
+                                                @foreach($cat->children as $sub)
+                                                    <a href="{{ route('products.index', ['categoria' => $sub->slug]) }}"
+                                                       class="block px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 hover:text-primary transition-colors uppercase tracking-wide">
+                                                        {{ $sub->name }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @else
+                                        <a href="{{ route('products.index', ['categoria' => $cat->slug]) }}"
+                                           class="block px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 hover:text-primary transition-colors uppercase tracking-wide">
+                                            {{ $cat->name }}
+                                        </a>
+                                    @endif
+                                @endforeach
+                            </div>
                         </div>
                         {{-- Predictive Search (ocupa el resto, incluyendo botón de lupa) --}}
                         <div class="flex-1 min-w-0">
@@ -74,8 +132,8 @@
                 @guest
                     <a href="{{ route('login') }}"
                        class="flex items-center gap-2 text-primary hover:text-primary/60 transition-colors font-semibold text-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        <span class="hidden md:inline">INICIAR SESIÓN</span>
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        <span class="hidden md:inline">Iniciar Sesión</span><span class="hidden md:inline text-primary/40 mx-0.5">/</span><span class="hidden md:inline">Registrarse</span>
                     </a>
                 @else
                     @if(auth()->user()->isAdmin() || auth()->user()->isVendedor())

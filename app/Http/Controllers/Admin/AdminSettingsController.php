@@ -45,11 +45,22 @@ class AdminSettingsController extends Controller
                 ['environment' => 'sandbox']
             );
         }
-        return view('admin.settings.payments', compact('settings'));
+        $transferSettings = \App\Models\SiteContent::getByKey('transfer_settings')?->metadata ?? [
+            'bank' => '', 'account_name' => '', 'account_number' => '', 'ruc' => '', 'extra' => '',
+        ];
+        return view('admin.settings.payments', compact('settings', 'transferSettings'));
     }
 
     public function updatePayment(Request $request, string $provider)
     {
+        if ($provider === 'transferencia') {
+            \App\Models\SiteContent::updateOrCreate(
+                ['key' => 'transfer_settings'],
+                ['metadata' => $request->only(['bank', 'account_name', 'account_number', 'ruc', 'extra'])]
+            );
+            return back()->with('success', 'Datos de transferencia actualizados.');
+        }
+
         $setting = PaymentSetting::firstOrCreate(['provider' => $provider]);
         $setting->update($request->only(['public_key', 'private_key', 'webhook_secret', 'environment', 'is_enabled']));
         return back()->with('success', 'Configuración de ' . $provider . ' actualizada.');
