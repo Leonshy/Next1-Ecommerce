@@ -6,7 +6,7 @@
             <div class="grid grid-cols-12 gap-0">
 
                 {{-- Category Sidebar (3/12 cols on lg) --}}
-                <div class="hidden lg:block col-span-3 h-[400px] relative z-20">
+                <div class="hidden lg:block col-span-3 h-[200px] sm:h-[280px] md:h-[400px] relative z-20">
                     <div class="bg-white rounded-xl shadow-[var(--shadow-card)] h-full flex flex-col overflow-hidden">
                         {{-- Header --}}
                         <div class="bg-primary text-white p-4 flex items-center gap-3 flex-shrink-0">
@@ -65,7 +65,7 @@
                 </div>
 
                 {{-- Hero Carousel (9/12 cols on lg, full on mobile) --}}
-                <div class="col-span-12 lg:col-span-9 h-[400px]">
+                <div class="col-span-12 lg:col-span-9 h-[200px] sm:h-[280px] md:h-[400px]">
                     @if($heroSlides->count())
                         <div class="relative h-full w-full overflow-hidden"
                              x-data="{ active: 0, total: {{ $heroSlides->count() }}, timer: null }"
@@ -85,16 +85,16 @@
                                          onerror="this.src='https://placehold.co/1200x400/1a537a/ffffff?text=Next1+Store'">
                                     <div class="absolute inset-0 flex items-center"
                                          style="background:linear-gradient(to right,rgba(0,0,0,.5),transparent)">
-                                        <div class="pl-12 text-white">
+                                        <div class="pl-4 sm:pl-8 md:pl-12 text-white">
                                             @if($slide->subtitle)
-                                                <p class="text-lg mb-2 opacity-90">{{ $slide->subtitle }}</p>
+                                                <p class="text-xs sm:text-sm md:text-lg mb-1 sm:mb-2 opacity-90">{{ $slide->subtitle }}</p>
                                             @endif
                                             @if($slide->title)
-                                                <h2 class="text-5xl font-black leading-tight mb-6">{{ $slide->title }}</h2>
+                                                <h2 class="text-xl sm:text-3xl md:text-5xl font-black leading-tight mb-2 sm:mb-6">{{ $slide->title }}</h2>
                                             @endif
                                             @if($slide->button_text && $slide->button_link)
                                                 <a href="{{ $slide->button_link }}"
-                                                   class="inline-block bg-secondary text-white px-8 py-3 font-semibold hover:opacity-90 transition-opacity">
+                                                   class="inline-block bg-secondary text-white px-4 py-2 sm:px-8 sm:py-3 text-sm sm:text-base font-semibold hover:opacity-90 transition-opacity">
                                                     {{ $slide->button_text }}
                                                 </a>
                                             @endif
@@ -124,11 +124,11 @@
                         </div>
                     @else
                         <div class="h-full bg-gradient-to-r from-primary to-primary-light flex items-center justify-center">
-                            <div class="text-center text-white">
-                                <h2 class="text-5xl font-black mb-4">Bienvenido a NEXT1</h2>
-                                <p class="text-xl mb-8 opacity-90">Tu tienda online de confianza en Paraguay</p>
+                            <div class="text-center text-white px-4">
+                                <h2 class="text-2xl sm:text-4xl md:text-5xl font-black mb-2 sm:mb-4">Bienvenido a NEXT1</h2>
+                                <p class="text-sm sm:text-xl mb-4 sm:mb-8 opacity-90">Tu tienda online de confianza en Paraguay</p>
                                 <a href="{{ route('products.index') }}"
-                                   class="inline-block bg-secondary text-white px-8 py-3 font-semibold hover:opacity-90 transition-opacity">
+                                   class="inline-block bg-secondary text-white px-4 py-2 sm:px-8 sm:py-3 text-sm sm:text-base font-semibold hover:opacity-90 transition-opacity">
                                     Ver Productos
                                 </a>
                             </div>
@@ -149,7 +149,8 @@
                 {{-- ── OFERTAS DEL DÍA (9/12 cols) ── --}}
                 @if($hotDeals->count())
                 <div class="col-span-12 lg:col-span-9"
-                     x-data="{ cur: 0, total: {{ $hotDeals->count() }}, perPage: 4 }">
+                     x-data="{ cur: 0, total: {{ $hotDeals->count() }}, perPage: 4 }"
+                     x-init="perPage = window.innerWidth < 640 ? 2 : 4; window.addEventListener('resize', () => { perPage = window.innerWidth < 640 ? 2 : 4; cur = Math.min(cur, Math.max(0, total - perPage)); })">
 
                     {{-- Header con forma de flecha --}}
                     <div class="flex items-center justify-between mb-6 border-b-2 border-border">
@@ -207,7 +208,7 @@
                             <div class="flex transition-transform duration-300"
                                  :style="'transform:translateX(-' + (cur * 100 / perPage) + '%)'">
                                 @foreach($hotDeals as $product)
-                                    <div class="flex-shrink-0 pl-4" style="flex:0 0 25%; max-width:25%">
+                                    <div class="flex-shrink-0 pl-4" :style="'flex:0 0 '+(100/perPage)+'%;max-width:'+(100/perPage)+'%'">
                                         @include('partials.product-card', ['product' => $product])
                                     </div>
                                 @endforeach
@@ -472,7 +473,8 @@
 
                 {{-- ── DESTACADOS (9/12 cols) ── --}}
                 <div class="col-span-12 lg:col-span-9"
-                     x-data="{ cur: 0, total: {{ $featured->count() }}, perPage: 4 }">
+                     x-data="{ cur: 0, total: {{ $featured->count() }}, perPage: 4 }"
+                     x-init="perPage = window.innerWidth < 640 ? 2 : 4; window.addEventListener('resize', () => { perPage = window.innerWidth < 640 ? 2 : 4; cur = Math.min(cur, Math.max(0, total - perPage)); })">
 
                     {{-- Header --}}
                     <div class="flex items-center justify-between mb-6 border-b-2 border-border">
@@ -502,7 +504,7 @@
                             <div class="flex transition-transform duration-300"
                                  :style="'transform:translateX(-' + (cur * 100 / perPage) + '%)'">
                                 @foreach($featured as $product)
-                                    <div class="flex-shrink-0 pl-4" style="flex:0 0 25%; max-width:25%">
+                                    <div class="flex-shrink-0 pl-4" :style="'flex:0 0 '+(100/perPage)+'%;max-width:'+(100/perPage)+'%'">
                                         @include('partials.product-card', ['product' => $product])
                                     </div>
                                 @endforeach
@@ -561,13 +563,14 @@
     <section class="py-6">
         <div class="container mx-auto px-4">
             <div class="grid grid-cols-12 gap-6 items-stretch"
-                 x-data="{ cur: 0, total: {{ $campaignProducts->count() }}, perPage: 4 }">
+                 x-data="{ cur: 0, total: {{ $campaignProducts->count() }}, perPage: 4 }"
+                 x-init="perPage = window.innerWidth < 640 ? 2 : 4; window.addEventListener('resize', () => { perPage = window.innerWidth < 640 ? 2 : 4; cur = Math.min(cur, Math.max(0, total - perPage)); })">
 
                 {{-- Banner campaña (3 cols) --}}
                 <div class="col-span-12 lg:col-span-3 flex flex-col">
                     <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"
-                       class="relative flex flex-col flex-1 rounded-xl overflow-hidden group"
-                       style="background: linear-gradient(135deg, #1a3a5c 0%, #0f2035 100%); min-height: 320px">
+                       class="relative flex flex-col flex-1 rounded-xl overflow-hidden group min-h-[180px] sm:min-h-[260px] md:min-h-[320px]"
+                       style="background: linear-gradient(135deg, #1a3a5c 0%, #0f2035 100%)"
                         @if($campaign->banner_image)
                             <img src="{{ $campaign->banner_image }}"
                                  alt="{{ $campaign->name }}"
@@ -621,7 +624,7 @@
                             <div class="flex transition-transform duration-300"
                                  :style="'transform:translateX(-' + (cur * 100 / perPage) + '%)'">
                                 @foreach($campaignProducts as $product)
-                                    <div class="flex-shrink-0 pl-4" style="flex:0 0 25%; max-width:25%">
+                                    <div class="flex-shrink-0 pl-4" :style="'flex:0 0 '+(100/perPage)+'%;max-width:'+(100/perPage)+'%'">
                                         @include('partials.product-card', ['product' => $product])
                                     </div>
                                 @endforeach

@@ -1,9 +1,21 @@
 <x-app-layout>
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8" x-data="{ showFilters: false }">
+
+    {{-- Botón toggle filtros (solo mobile) --}}
+    <div class="md:hidden mb-4">
+        <button @click="showFilters = !showFilters"
+                class="flex items-center justify-center gap-2 w-full bg-primary text-white px-4 py-3 text-sm font-semibold rounded-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/>
+            </svg>
+            <span x-text="showFilters ? 'Ocultar filtros' : 'Ver filtros'">Ver filtros</span>
+        </button>
+    </div>
+
     <div class="flex flex-col md:flex-row gap-6">
 
         {{-- ===== SIDEBAR FILTROS ===== --}}
-        <aside class="w-full md:w-64 flex-shrink-0">
+        <aside class="w-full md:w-64 flex-shrink-0 md:block" :class="{ 'hidden': !showFilters }">
             <form method="GET" action="{{ route('products.index') }}" id="filter-form">
 
                 {{-- Buscar --}}

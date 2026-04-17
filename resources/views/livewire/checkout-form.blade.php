@@ -238,8 +238,8 @@
 window.addEventListener('bancard:init', (e) => {
     const url = e.detail.url;
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
-    overlay.innerHTML = `<iframe src="${url}" style="width:460px;height:560px;border:none;border-radius:12px;"></iframe>`;
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML = `<iframe src="${url}" style="width:min(460px,100%);height:min(560px,85vh);border:none;border-radius:12px;display:block;"></iframe>`;
     document.body.appendChild(overlay);
 });
 </script>
