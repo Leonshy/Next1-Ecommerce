@@ -210,6 +210,11 @@ class CheckoutForm extends Component
 
             DB::commit();
 
+            // Email de confirmación (no bloquea el flujo si falla)
+            try {
+                (new \App\Services\SmtpEmailService())->sendOrderConfirmation($order);
+            } catch (\Throwable) {}
+
             if ($this->paymentMethod === 'bancard') {
                 $service   = new \App\Services\BancardService();
                 $processId = time();

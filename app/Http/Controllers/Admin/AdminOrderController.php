@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Services\SmtpEmailService;
 use Illuminate\Http\Request;
 
 class AdminOrderController extends Controller
@@ -42,8 +43,17 @@ class AdminOrderController extends Controller
             'status' => 'required|in:pendiente,pendiente_transferencia,confirmado,procesando,enviado,entregado,cancelado',
         ]);
 
-        $order = Order::findOrFail($id);
+        $order = Order::with('items')->findOrFail($id);
+        $previousStatus = $order->status;
         $order->update(['status' => $request->status]);
+
+        // Enviar email de notificación al cliente para estados clave
+        $notifyStatuses = ['confirmado', 'procesando', 'enviado', 'entregado', 'cancelado'];
+        if (in_array($request->status, $notifyStatuses) && $request->status !== $previousStatus) {
+            try {
+                (new SmtpEmailService())->sendOrderStatusUpdate($order);
+            } catch (\Throwable) {}
+        }
 
         // Generate invoice when confirmed
         if ($request->status === 'confirmado' && !$order->invoice) {

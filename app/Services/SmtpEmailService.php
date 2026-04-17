@@ -2,28 +2,121 @@
 
 namespace App\Services;
 
-use App\Models\EmailTemplate;
+use App\Models\Order;
 use App\Models\SmtpSetting;
+use App\Models\SiteContent;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Mail\Message;
 
 class SmtpEmailService
 {
-    public function sendFromTemplate(string $templateKey, string $to, array $variables = []): bool
+    // ── Transaccionales ───────────────────────────────────────────────────────
+
+    public function sendOrderConfirmation(Order $order): bool
     {
-        $template = EmailTemplate::where('template_key', $templateKey)->where('is_active', true)->first();
+        $order->loadMissing('items');
 
-        if (!$template) {
-            Log::warning("Email template '{$templateKey}' not found or inactive.");
-            return false;
-        }
+        $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
 
-        $subject = $this->replaceVariables($template->subject, $variables);
-        $html    = $this->replaceVariables($template->body_html, $variables);
+        $methodLabel = match ($order->payment_method) {
+            'transferencia' => 'Transferencia bancaria',
+            'bancard'       => 'Bancard VPOS (tarjeta)',
+            default         => ucfirst($order->payment_method ?? 'Online'),
+        };
 
-        return $this->sendHtml($to, $subject, $html);
+        $statusMsg = $order->payment_method === 'transferencia'
+            ? 'Estamos validando tu comprobante de transferencia. Te notificaremos cuando confirmemos el pago.'
+            : 'Tu pedido fue recibido y está siendo procesado.';
+
+        $html = $this->wrapEmail($storeName, "
+            <h2 style='margin:0 0 8px;font-size:22px;color:#1a537a;'>¡Gracias por tu pedido!</h2>
+            <p style='margin:0 0 20px;color:#555;font-size:15px;'>Hola <strong>{$order->customer_name}</strong>, tu pedido fue recibido correctamente.</p>
+
+            <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:20px;'>
+                <tr>
+                    <td style='padding:10px 14px;background:#f0f6fb;border-radius:8px 8px 0 0;'>
+                        <strong style='font-size:14px;color:#1a537a;'>Pedido {$order->order_number}</strong>
+                    </td>
+                    <td style='padding:10px 14px;background:#f0f6fb;border-radius:8px 8px 0 0;text-align:right;font-size:13px;color:#777;'>
+                        {$order->created_at->format('d/m/Y H:i')}
+                    </td>
+                </tr>
+            </table>
+
+            " . $this->buildItemsTable($order) . "
+
+            <table width='100%' cellpadding='0' cellspacing='0' style='margin:16px 0;'>
+                <tr>
+                    <td style='padding:5px 0;color:#555;font-size:14px;'>Subtotal</td>
+                    <td style='padding:5px 0;text-align:right;font-size:14px;'>Gs. " . number_format($order->subtotal, 0, ',', '.') . "</td>
+                </tr>
+                <tr>
+                    <td style='padding:5px 0;color:#555;font-size:14px;'>Envío</td>
+                    <td style='padding:5px 0;text-align:right;font-size:14px;'>" . ($order->shipping_cost > 0 ? 'Gs. ' . number_format($order->shipping_cost, 0, ',', '.') : 'Gratis') . "</td>
+                </tr>
+                " . ($order->discount > 0 ? "<tr><td style='padding:5px 0;color:#16a34a;font-size:14px;'>Descuento</td><td style='padding:5px 0;text-align:right;font-size:14px;color:#16a34a;'>-Gs. " . number_format($order->discount, 0, ',', '.') . "</td></tr>" : "") . "
+                <tr style='border-top:2px solid #e5e7eb;'>
+                    <td style='padding:10px 0 0;font-weight:700;font-size:16px;color:#1a537a;'>Total</td>
+                    <td style='padding:10px 0 0;text-align:right;font-weight:700;font-size:16px;color:#1a537a;'>Gs. " . number_format($order->total, 0, ',', '.') . "</td>
+                </tr>
+            </table>
+
+            <p style='margin:16px 0 6px;font-size:13px;color:#777;'><strong>Método de pago:</strong> {$methodLabel}</p>
+            <p style='margin:0 0 20px;font-size:13px;color:#777;'><strong>Dirección de envío:</strong> {$order->shipping_address}, {$order->shipping_city}</p>
+
+            <div style='background:#f0f6fb;border-left:4px solid #1a537a;padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#444;'>
+                {$statusMsg}
+            </div>
+        ");
+
+        return $this->sendHtml(
+            $order->customer_email,
+            "Pedido #{$order->order_number} recibido — {$storeName}",
+            $html
+        );
     }
+
+    public function sendOrderStatusUpdate(Order $order): bool
+    {
+        $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
+
+        [$color, $icon, $title, $body] = match ($order->status) {
+            'confirmado'  => ['#1d4ed8', '✅', 'Pedido confirmado',     'Tu pago fue confirmado. Estamos preparando tu pedido.'],
+            'procesando'  => ['#7c3aed', '⚙️', 'Pedido en preparación', 'Tu pedido está siendo preparado para su despacho.'],
+            'enviado'     => ['#0369a1', '🚚', 'Pedido enviado',         'Tu pedido ya está en camino. ¡Pronto llegará!'],
+            'entregado'   => ['#15803d', '🎉', 'Pedido entregado',       '¡Tu pedido fue entregado! Esperamos que estés satisfecho.'],
+            'cancelado'   => ['#b91c1c', '❌', 'Pedido cancelado',       'Tu pedido fue cancelado. Contactanos si tenés alguna duda.'],
+            default       => ['#1a537a', '📦', 'Actualización de pedido', 'El estado de tu pedido fue actualizado.'],
+        };
+
+        $html = $this->wrapEmail($storeName, "
+            <div style='text-align:center;padding:10px 0 24px;'>
+                <span style='font-size:40px;'>{$icon}</span>
+                <h2 style='margin:12px 0 6px;font-size:22px;color:{$color};'>{$title}</h2>
+                <p style='margin:0;color:#555;font-size:15px;'>Pedido <strong>#{$order->order_number}</strong></p>
+            </div>
+
+            <p style='margin:0 0 20px;font-size:15px;color:#444;text-align:center;'>{$body}</p>
+
+            " . $this->buildItemsTable($order) . "
+
+            <table width='100%' cellpadding='0' cellspacing='0' style='margin:16px 0;border-top:2px solid #e5e7eb;'>
+                <tr>
+                    <td style='padding:12px 0 0;font-weight:700;font-size:16px;color:{$color};'>Total</td>
+                    <td style='padding:12px 0 0;text-align:right;font-weight:700;font-size:16px;color:{$color};'>Gs. " . number_format($order->total, 0, ',', '.') . "</td>
+                </tr>
+            </table>
+        ");
+
+        return $this->sendHtml(
+            $order->customer_email,
+            "Tu pedido #{$order->order_number} — {$title}",
+            $html
+        );
+    }
+
+    // ── Genérico ──────────────────────────────────────────────────────────────
 
     public function sendHtml(string $to, string $subject, string $html): bool
     {
@@ -33,11 +126,9 @@ class SmtpEmailService
             Mail::html($html, function (Message $message) use ($to, $subject) {
                 $smtp = SmtpSetting::first();
                 $from = $smtp?->from_email ?? config('mail.from.address');
-                $name = $smtp?->from_name ?? config('mail.from.name');
+                $name = $smtp?->from_name  ?? config('mail.from.name');
 
-                $message->to($to)
-                        ->subject($subject)
-                        ->from($from, $name);
+                $message->to($to)->subject($subject)->from($from, $name);
             });
 
             return true;
@@ -47,29 +138,98 @@ class SmtpEmailService
         }
     }
 
+    // ── Privados ──────────────────────────────────────────────────────────────
+
     private function configureMailer(): void
     {
         $smtp = SmtpSetting::first();
 
         if (!$smtp || !$smtp->is_active || !$smtp->host) return;
 
+        $encryption = in_array($smtp->encryption, ['ssl', 'tls']) ? $smtp->encryption : null;
+
         config([
-            'mail.default'              => 'smtp',
-            'mail.mailers.smtp.host'    => $smtp->host,
-            'mail.mailers.smtp.port'    => $smtp->port,
-            'mail.mailers.smtp.encryption' => $smtp->encryption === 'none' ? null : $smtp->encryption,
-            'mail.mailers.smtp.username' => $smtp->username,
-            'mail.mailers.smtp.password' => $smtp->password,
-            'mail.from.address'         => $smtp->from_email,
-            'mail.from.name'            => $smtp->from_name,
+            'mail.default'                   => 'smtp',
+            'mail.mailers.smtp.host'         => $smtp->host,
+            'mail.mailers.smtp.port'         => $smtp->port,
+            'mail.mailers.smtp.encryption'   => $encryption,
+            'mail.mailers.smtp.username'     => $smtp->username,
+            'mail.mailers.smtp.password'     => $smtp->password,
+            'mail.from.address'              => $smtp->from_email,
+            'mail.from.name'                 => $smtp->from_name,
         ]);
+
+        // SSL en puerto 465: habilitar verificación relajada para certificados de hosting compartido
+        if ($encryption === 'ssl') {
+            config([
+                'mail.mailers.smtp.stream' => [
+                    'ssl' => [
+                        'allow_self_signed' => true,
+                        'verify_peer'       => false,
+                        'verify_peer_name'  => false,
+                    ],
+                ],
+            ]);
+        }
     }
 
-    private function replaceVariables(string $text, array $variables): string
+    private function buildItemsTable(Order $order): string
     {
-        foreach ($variables as $key => $value) {
-            $text = str_replace('{' . $key . '}', $value, $text);
+        $rows = '';
+        foreach ($order->items as $item) {
+            $rows .= "
+            <tr>
+                <td style='padding:9px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;'>{$item->product_name}</td>
+                <td style='padding:9px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#555;text-align:center;'>x{$item->quantity}</td>
+                <td style='padding:9px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;text-align:right;font-weight:600;'>Gs. " . number_format($item->total_price, 0, ',', '.') . "</td>
+            </tr>";
         }
-        return $text;
+
+        return "
+        <table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:4px;'>
+            <thead>
+                <tr style='background:#f8fafc;'>
+                    <th style='padding:9px 12px;text-align:left;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;'>Producto</th>
+                    <th style='padding:9px 12px;text-align:center;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;'>Cant.</th>
+                    <th style='padding:9px 12px;text-align:right;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;'>Total</th>
+                </tr>
+            </thead>
+            <tbody>{$rows}</tbody>
+        </table>";
+    }
+
+    private function wrapEmail(string $storeName, string $content): string
+    {
+        return "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+        <body style='margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;'>
+            <table width='100%' cellpadding='0' cellspacing='0' style='background:#f4f4f4;padding:32px 16px;'>
+                <tr><td align='center'>
+                    <table width='100%' cellpadding='0' cellspacing='0' style='max-width:580px;'>
+
+                        {{-- Header --}}
+                        <tr>
+                            <td style='background:#1a537a;padding:24px 32px;border-radius:12px 12px 0 0;text-align:center;'>
+                                <span style='color:#fff;font-size:22px;font-weight:900;letter-spacing:1px;'>{$storeName}</span>
+                            </td>
+                        </tr>
+
+                        {{-- Body --}}
+                        <tr>
+                            <td style='background:#ffffff;padding:32px;border-radius:0 0 12px 12px;'>
+                                {$content}
+                            </td>
+                        </tr>
+
+                        {{-- Footer --}}
+                        <tr>
+                            <td style='padding:20px 0;text-align:center;font-size:12px;color:#aaa;'>
+                                © " . now()->year . " {$storeName}. Este email fue enviado automáticamente, por favor no respondas.
+                            </td>
+                        </tr>
+
+                    </table>
+                </td></tr>
+            </table>
+        </body></html>";
     }
 }

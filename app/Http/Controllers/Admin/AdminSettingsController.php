@@ -149,10 +149,23 @@ class AdminSettingsController extends Controller
 
     public function updateEmail(Request $request)
     {
-        SmtpSetting::updateOrCreate([], $request->only([
-            'host', 'port', 'username', 'password',
-            'encryption', 'from_email', 'from_name', 'is_active',
-        ]));
+        $data = $request->only([
+            'host', 'port', 'username', 'from_email', 'from_name', 'is_active',
+        ]);
+
+        // Normalizar encryption al enum de la DB
+        $enc = $request->input('encryption', 'none');
+        $data['encryption'] = in_array($enc, ['ssl', 'tls']) ? $enc : 'none';
+
+        // Solo actualizar contraseña si se envió una nueva
+        $password = $request->input('password');
+        if (!empty($password)) {
+            $data['password'] = $password;
+        }
+
+        $data['is_active'] = $request->boolean('is_active');
+
+        SmtpSetting::updateOrCreate([], $data);
         return back()->with('success', 'SMTP actualizado.');
     }
 
