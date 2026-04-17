@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\AdminBrandController;
 use App\Http\Controllers\Admin\AdminTagController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -69,6 +70,11 @@ Route::middleware('maintenance')->group(function () {
     });
 
 });
+
+// Verificación newsletter (pública, throttled)
+Route::get('/newsletter/verificar/{token}', [NewsletterController::class, 'verify'])
+    ->name('newsletter.verify')
+    ->middleware('throttle:10,1');
 
 // Webhook Bancard (público, sin CSRF, sin mantenimiento)
 Route::post('/webhooks/bancard', [CheckoutController::class, 'bancardWebhook'])

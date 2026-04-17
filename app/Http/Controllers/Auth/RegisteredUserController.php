@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\NewsletterSubscriber;
 use App\Models\User;
+use App\Services\SmtpEmailService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +47,16 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+
+        // Suscribir al newsletter si el usuario lo solicitó
+        if ($request->boolean('accept_promotions')) {
+            try {
+                $token = NewsletterSubscriber::subscribe($user->email);
+                if ($token) {
+                    app(SmtpEmailService::class)->sendNewsletterVerification($user->email, $token);
+                }
+            } catch (\Throwable) {}
+        }
 
         return redirect(route('home', absolute: false));
     }

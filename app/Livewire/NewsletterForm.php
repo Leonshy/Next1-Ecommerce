@@ -4,25 +4,34 @@ namespace App\Livewire;
 
 use App\Models\NewsletterSubscriber;
 use App\Services\HCaptchaService;
+use App\Services\SmtpEmailService;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
 class NewsletterForm extends Component
 {
-    public string $email = '';
-    public string $hcaptchaToken = '';
-    public bool $submitted = false;
-    public string $message = '';
+    public string $email          = '';
+    public string $hcaptchaToken  = '';
+    public bool   $submitted      = false;
 
     protected $rules = [
-        'email' => 'required|email|max:255',
+        'email' => 'required|email:rfc,dns|max:254',
     ];
 
     public function submit(): void
     {
         $this->validate();
 
-        $captchaService = app(HCaptchaService::class);
+        // Rate limiting: máx 3 intentos por email+IP por hora
+        $key = 'newsletter.' . sha1(strtolower($this->email) . '|' . request()->ip());
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            $this->submitted = true; // Mostrar éxito de todas formas (no revelar throttling)
+            return;
+        }
+        RateLimiter::hit($key, 3600);
 
+        // hCaptcha (si está habilitado para newsletter)
+        $captchaService = app(HCaptchaService::class);
         if ($captchaService->isProtected('newsletter')) {
             $result = $captchaService->verify($this->hcaptchaToken);
             if (!$result['success']) {
@@ -31,21 +40,17 @@ class NewsletterForm extends Component
             }
         }
 
-        $exists = NewsletterSubscriber::where('email', $this->email)->first();
+        $token = NewsletterSubscriber::subscribe($this->email);
 
-        if ($exists) {
-            $this->message   = '¡Ya estás suscrito!';
-            $this->submitted = true;
-            return;
+        // Enviar email de verificación si se generó un token nuevo
+        if ($token) {
+            try {
+                app(SmtpEmailService::class)->sendNewsletterVerification($this->email, $token);
+            } catch (\Throwable) {
+                // No fallar la suscripción si el email falla
+            }
         }
 
-        NewsletterSubscriber::create([
-            'email'         => $this->email,
-            'status'        => 'pendiente',
-            'subscribed_at' => now(),
-        ]);
-
-        $this->message   = '¡Gracias por suscribirte!';
         $this->submitted = true;
         $this->email     = '';
     }

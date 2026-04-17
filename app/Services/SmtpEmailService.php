@@ -11,6 +11,48 @@ use Illuminate\Mail\Message;
 
 class SmtpEmailService
 {
+    // ── Newsletter ────────────────────────────────────────────────────────────
+
+    public function sendNewsletterVerification(string $email, string $token): bool
+    {
+        $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
+        $url       = url('/newsletter/verificar/' . $token);
+        $expires   = now()->addDays(30)->format('d/m/Y');
+
+        $html = $this->wrapEmail($storeName, "
+            <div style='text-align:center;padding:10px 0 24px;'>
+                <span style='font-size:40px;'>📧</span>
+                <h2 style='margin:12px 0 6px;font-size:22px;color:#1a537a;'>Confirmá tu suscripción</h2>
+                <p style='margin:0;color:#555;font-size:15px;'>Hacé clic en el botón para empezar a recibir nuestras novedades.</p>
+            </div>
+
+            <div style='text-align:center;margin:28px 0;'>
+                <a href='{$url}'
+                   style='display:inline-block;background:#1a537a;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;'>
+                    Confirmar suscripción
+                </a>
+            </div>
+
+            <p style='font-size:12px;color:#999;text-align:center;margin:0 0 8px;'>
+                O copiá este enlace en tu navegador:
+            </p>
+            <p style='font-size:11px;color:#aaa;text-align:center;word-break:break-all;margin:0 0 24px;'>
+                {$url}
+            </p>
+
+            <div style='background:#fff8e7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;'>
+                ⏱ Este enlace es válido hasta el <strong>{$expires}</strong>.<br>
+                Si no solicitaste esta suscripción, podés ignorar este email.
+            </div>
+        ");
+
+        return $this->sendHtml(
+            $email,
+            "Confirmá tu suscripción al newsletter de {$storeName}",
+            $html
+        );
+    }
+
     // ── Transaccionales ───────────────────────────────────────────────────────
 
     public function sendOrderConfirmation(Order $order): bool
