@@ -53,6 +53,10 @@ class AdminProductController extends Controller
         $data = $this->validateProduct($request);
         $data['slug'] = $this->uniqueSlug(Str::slug($data['name']));
 
+        if (empty($data['sku'])) {
+            $data['sku'] = Product::generateSku($data['category_id'] ?? null);
+        }
+
         $product = Product::create($data);
 
         $this->syncImages($product, $request);
@@ -159,25 +163,42 @@ class AdminProductController extends Controller
             $imageUrl      = trim($data['imagen'] ?? $data['image'] ?? '');
 
             try {
-                $product = Product::create([
+                $categoryId = $categoryName ? ($categories[$categoryName] ?? null) : null;
+                $skuRaw     = trim($data['sku'] ?? '');
+                $sku        = $skuRaw ?: null;
+
+                $attributes = $sku ? ['sku' => $sku] : ['slug' => $slug];
+
+                $existing = $sku
+                    ? Product::where('sku', $sku)->first()
+                    : Product::where('slug', $slug)->first();
+
+                $productData = [
                     'name'           => $name,
-                    'slug'           => $slug,
                     'description'    => trim($data['descripcion'] ?? $data['description'] ?? '') ?: null,
                     'price'          => $price,
                     'original_price' => $originalPrice !== '' ? (float) $originalPrice : null,
-                    'sku'            => trim($data['sku'] ?? '') ?: null,
                     'stock'          => (int) ($data['stock'] ?? 0),
-                    'category_id'    => $categoryName ? ($categories[$categoryName] ?? null) : null,
-                    'brand_id'       => $brandName    ? ($brands[$brandName]       ?? null) : null,
+                    'category_id'    => $categoryId,
+                    'brand_id'       => $brandName ? ($brands[$brandName] ?? null) : null,
                     'badge'          => trim($data['badge'] ?? '') ?: null,
                     'tags'           => $tags,
                     'is_active'      => !in_array(strtolower(trim($data['activo']    ?? $data['is_active']   ?? 'true')),  ['false', '0', 'no']),
                     'is_featured'    =>  in_array(strtolower(trim($data['destacado'] ?? $data['is_featured'] ?? 'false')), ['true',  '1', 'si', 'sí']),
                     'is_new'         =>  in_array(strtolower(trim($data['nuevo']     ?? $data['is_new']      ?? 'false')), ['true',  '1', 'si', 'sí']),
                     'is_hot_deal'    =>  in_array(strtolower(trim($data['oferta']    ?? $data['is_hot_deal'] ?? 'false')), ['true',  '1', 'si', 'sí']),
-                ]);
+                ];
 
-                if ($imageUrl) {
+                if ($existing) {
+                    $existing->update($productData);
+                    $product = $existing;
+                } else {
+                    $productData['slug'] = $this->uniqueSlug(Str::slug($data['slug'] ?? $name));
+                    $productData['sku']  = $sku ?? Product::generateSku($categoryId);
+                    $product = Product::create($productData);
+                }
+
+                if ($imageUrl && !$product->mainImage) {
                     $mediaFile = MediaFile::where('file_url', $imageUrl)->first();
                     ProductImage::create([
                         'product_id'    => $product->id,

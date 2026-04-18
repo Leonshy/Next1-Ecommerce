@@ -76,6 +76,23 @@ class Product extends Model
         return $query->where('is_hot_deal', true);
     }
 
+    public static function generateSku(?string $categoryId): string
+    {
+        $prefix = 'GEN';
+        if ($categoryId) {
+            $catName = \App\Models\Category::find($categoryId)?->name ?? 'GEN';
+            $prefix  = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $catName), 0, 3)) ?: 'GEN';
+        }
+
+        $last = static::where('sku', 'like', "{$prefix}-%")
+            ->orderByRaw("CAST(SUBSTR(sku, " . (strlen($prefix) + 2) . ") AS UNSIGNED) DESC")
+            ->value('sku');
+
+        $next = $last ? ((int) substr($last, strlen($prefix) + 1)) + 1 : 1;
+
+        return $prefix . '-' . str_pad($next, 4, '0', STR_PAD_LEFT);
+    }
+
     public function getDiscountPercentAttribute(): ?int
     {
         if ($this->original_price && $this->original_price > $this->price) {
