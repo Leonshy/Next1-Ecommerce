@@ -173,14 +173,17 @@ class AdminSettingsController extends Controller
     {
         $request->validate(['to' => 'required|email']);
 
-        $service = new SmtpEmailService();
-        $sent    = $service->sendHtml(
-            $request->to,
-            'Email de prueba - Next1',
-            '<h1>¡Funciona!</h1><p>Este es un email de prueba desde el panel de administración de Next1.</p>'
-        );
-
-        return back()->with($sent ? 'success' : 'error', $sent ? 'Email enviado.' : 'Error al enviar el email.');
+        try {
+            $service = new SmtpEmailService();
+            $service->sendHtml(
+                $request->to,
+                'Email de prueba - Next1',
+                '<h1>¡Funciona!</h1><p>Este es un email de prueba desde el panel de administración de Next1.</p>'
+            );
+            return back()->with('success', 'Email enviado correctamente a ' . $request->to);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Error al enviar: ' . $e->getMessage());
+        }
     }
 
     // ── hCaptcha ──────────────────────────────────────────────────────────────

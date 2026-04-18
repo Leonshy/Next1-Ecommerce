@@ -186,7 +186,13 @@ class SmtpEmailService
     {
         $smtp = SmtpSetting::first();
 
-        if (!$smtp || !$smtp->is_active || !$smtp->host) return;
+        if (!$smtp || !$smtp->host) {
+            throw new \RuntimeException('SMTP no configurado. Guardá la configuración antes de enviar.');
+        }
+
+        if (!$smtp->is_active) {
+            throw new \RuntimeException('SMTP desactivado. Activalo en Configuración → Email.');
+        }
 
         $encryption = in_array($smtp->encryption, ['ssl', 'tls']) ? $smtp->encryption : null;
 
