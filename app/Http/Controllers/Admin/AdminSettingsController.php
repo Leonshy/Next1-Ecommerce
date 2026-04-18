@@ -173,14 +173,44 @@ class AdminSettingsController extends Controller
     {
         $request->validate(['to' => 'required|email']);
 
-        $service = new SmtpEmailService();
-        $sent    = $service->sendHtml(
-            $request->to,
-            'Email de prueba - Next1',
-            '<h1>¡Funciona!</h1><p>Este es un email de prueba desde el panel de administración de Next1.</p>'
-        );
+        try {
+            $service = new SmtpEmailService();
+            $service->sendHtml(
+                $request->to,
+                'Email de prueba - Next1',
+                '<h1>¡Funciona!</h1><p>Este es un email de prueba desde el panel de administración de Next1.</p>'
+            );
+            return back()->with('success', 'Email enviado correctamente a ' . $request->to);
+        } catch (\Throwable $e) {
+            return back()->with('error', $this->friendlySmtpError($e->getMessage()));
+        }
+    }
 
-        return back()->with($sent ? 'success' : 'error', $sent ? 'Email enviado correctamente a ' . $request->to : 'Error al enviar el email. Revisá los logs.');
+    private function friendlySmtpError(string $error): string
+    {
+        if (str_contains($error, 'SMTP_NOT_CONFIGURED')) {
+            return 'No hay configuración SMTP guardada. Completá los datos y guardá antes de enviar.';
+        }
+        if (str_contains($error, 'SMTP_DISABLED')) {
+            return 'El SMTP está desactivado. Activalo con el toggle y guardá la configuración.';
+        }
+        if (str_contains($error, '535') || str_contains($error, 'authentication failed')) {
+            return 'Contraseña incorrecta. Verificá las credenciales del correo en el servidor.';
+        }
+        if (str_contains($error, 'Connection refused') || str_contains($error, 'Unable to connect')) {
+            return 'No se pudo conectar al servidor de correo. Verificá que el host y el puerto sean correctos.';
+        }
+        if (str_contains($error, 'getaddrinfo') || str_contains($error, 'name resolution')) {
+            return 'El host SMTP no existe o no se puede resolver. Verificá el nombre del servidor.';
+        }
+        if (str_contains($error, 'ssl') || str_contains($error, 'SSL') || str_contains($error, 'certificate')) {
+            return 'Error de certificado SSL. Probá cambiar el cifrado a TLS (puerto 587).';
+        }
+        if (str_contains($error, 'timed out') || str_contains($error, 'timeout')) {
+            return 'El servidor de correo tardó demasiado en responder. Verificá el host y el puerto.';
+        }
+
+        return 'Error al enviar el email. Verificá la configuración SMTP.';
     }
 
     // ── hCaptcha ──────────────────────────────────────────────────────────────

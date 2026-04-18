@@ -46,7 +46,7 @@ class SmtpEmailService
             </div>
         ");
 
-        return $this->sendHtml(
+        return $this->sendHtmlSilent(
             $email,
             "Confirmá tu suscripción al newsletter de {$storeName}",
             $html
@@ -112,7 +112,7 @@ class SmtpEmailService
             </div>
         ");
 
-        return $this->sendHtml(
+        return $this->sendHtmlSilent(
             $order->customer_email,
             "Pedido #{$order->order_number} recibido — {$storeName}",
             $html
@@ -151,7 +151,7 @@ class SmtpEmailService
             </table>
         ");
 
-        return $this->sendHtml(
+        return $this->sendHtmlSilent(
             $order->customer_email,
             "Tu pedido #{$order->order_number} — {$title}",
             $html
@@ -162,18 +162,23 @@ class SmtpEmailService
 
     public function sendHtml(string $to, string $subject, string $html): bool
     {
+        $this->configureMailer();
+
+        Mail::html($html, function (Message $message) use ($to, $subject) {
+            $smtp = SmtpSetting::first();
+            $from = $smtp?->from_email ?? config('mail.from.address');
+            $name = $smtp?->from_name  ?? config('mail.from.name');
+
+            $message->to($to)->subject($subject)->from($from, $name);
+        });
+
+        return true;
+    }
+
+    public function sendHtmlSilent(string $to, string $subject, string $html): bool
+    {
         try {
-            $this->configureMailer();
-
-            Mail::html($html, function (Message $message) use ($to, $subject) {
-                $smtp = SmtpSetting::first();
-                $from = $smtp?->from_email ?? config('mail.from.address');
-                $name = $smtp?->from_name  ?? config('mail.from.name');
-
-                $message->to($to)->subject($subject)->from($from, $name);
-            });
-
-            return true;
+            return $this->sendHtml($to, $subject, $html);
         } catch (\Throwable $e) {
             Log::error('Email send failed', ['error' => $e->getMessage(), 'to' => $to]);
             return false;
@@ -186,7 +191,12 @@ class SmtpEmailService
     {
         $smtp = SmtpSetting::first();
 
-        if (!$smtp || !$smtp->is_active || !$smtp->host) return;
+        if (!$smtp || !$smtp->host) {
+            throw new \RuntimeException('SMTP_NOT_CONFIGURED');
+        }
+        if (!$smtp->is_active) {
+            throw new \RuntimeException('SMTP_DISABLED');
+        }
 
         $encryption = in_array($smtp->encryption, ['ssl', 'tls']) ? $smtp->encryption : null;
 
