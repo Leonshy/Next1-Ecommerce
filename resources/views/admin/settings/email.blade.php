@@ -4,17 +4,6 @@
 @section('content')
 <div class="max-w-3xl space-y-6">
 
-    @if(session('success'))
-        <div class="rounded-xl border bg-green-50 border-green-200 p-4">
-            <p class="text-sm font-medium text-green-700">{{ session('success') }}</p>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="rounded-xl border bg-red-50 border-red-200 p-4">
-            <p class="text-sm font-medium text-red-700">{{ session('error') }}</p>
-        </div>
-    @endif
-
     {{-- Configuración SMTP --}}
     <form method="POST" action="{{ route('admin.settings.email.update') }}"
           x-data="{
