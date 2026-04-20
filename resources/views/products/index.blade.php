@@ -47,8 +47,16 @@
                                 <input type="radio" name="categoria" value="{{ $cat->slug }}"
                                        {{ request('categoria') === $cat->slug ? 'checked' : '' }}
                                        class="text-primary accent-primary">
-                                <span class="text-sm text-foreground group-hover:text-primary transition-colors">{{ $cat->name }}</span>
+                                <span class="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{{ $cat->name }}</span>
                             </label>
+                            @foreach($cat->children as $child)
+                                <label class="flex items-center gap-2 cursor-pointer group pl-4">
+                                    <input type="radio" name="categoria" value="{{ $child->slug }}"
+                                           {{ request('categoria') === $child->slug ? 'checked' : '' }}
+                                           class="text-primary accent-primary">
+                                    <span class="text-sm text-muted-foreground group-hover:text-primary transition-colors">{{ $child->name }}</span>
+                                </label>
+                            @endforeach
                         @endforeach
                     </div>
                 </div>

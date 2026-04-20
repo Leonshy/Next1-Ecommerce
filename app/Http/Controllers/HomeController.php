@@ -30,6 +30,6 @@ class HomeController extends Controller
         return view('home', compact(
             'heroSlides', 'hotDeals', 'newProducts', 'featured',
             'bestSellers', 'categories', 'campaigns', 'promoBanners', 'brands', 'analytics'
-        ));
+        ) + ['seoPage' => 'home']);
     }
 }

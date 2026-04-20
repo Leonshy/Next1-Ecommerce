@@ -161,21 +161,74 @@
     </div>
 </div>
 
-{{-- Etiqueta --}}
-<div>
-    <label class="block text-sm font-medium text-gray-700 mb-1">Etiqueta de productos</label>
-    <input type="text" name="tag"
-           value="{{ old('tag') }}"
-           placeholder="Ej: blackfriday, ofertas, verano"
-           list="tags-datalist-{{ $e ? 'edit' : 'create' }}"
-           autocomplete="off"
-           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4a6b]/30 focus:border-[#1a4a6b]">
-    <datalist id="tags-datalist-{{ $e ? 'edit' : 'create' }}">
-        @foreach($tags ?? [] as $tagName => $tagSlug)
-            <option value="{{ $tagSlug }}">{{ $tagName }}</option>
-        @endforeach
-    </datalist>
-    <p class="text-xs text-gray-400 mt-1">Los productos con esta etiqueta aparecen al lado del banner en el inicio.</p>
+{{-- Filtro de productos --}}
+<div x-data="{ filterType: '{{ old('filter_type', 'tag') }}' }"
+     @if($e) x-on:campaign-set-filter.window="filterType = $event.detail.filterType" @endif>
+    <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar productos por</label>
+    <div class="flex gap-2 mb-3">
+        <label class="flex-1">
+            <input type="radio" name="filter_type" value="tag" x-model="filterType" class="sr-only peer">
+            <div class="text-center px-3 py-2 border rounded-lg text-sm cursor-pointer transition-colors peer-checked:border-[#1a4a6b] peer-checked:bg-[#1a4a6b]/5 peer-checked:text-[#1a4a6b] peer-checked:font-semibold border-gray-200 text-gray-600 hover:bg-gray-50">
+                Etiqueta
+            </div>
+        </label>
+        <label class="flex-1">
+            <input type="radio" name="filter_type" value="category" x-model="filterType" class="sr-only peer">
+            <div class="text-center px-3 py-2 border rounded-lg text-sm cursor-pointer transition-colors peer-checked:border-[#1a4a6b] peer-checked:bg-[#1a4a6b]/5 peer-checked:text-[#1a4a6b] peer-checked:font-semibold border-gray-200 text-gray-600 hover:bg-gray-50">
+                Categoría
+            </div>
+        </label>
+        <label class="flex-1">
+            <input type="radio" name="filter_type" value="brand" x-model="filterType" class="sr-only peer">
+            <div class="text-center px-3 py-2 border rounded-lg text-sm cursor-pointer transition-colors peer-checked:border-[#1a4a6b] peer-checked:bg-[#1a4a6b]/5 peer-checked:text-[#1a4a6b] peer-checked:font-semibold border-gray-200 text-gray-600 hover:bg-gray-50">
+                Marca
+            </div>
+        </label>
+    </div>
+
+    {{-- Etiqueta --}}
+    <div x-show="filterType === 'tag'">
+        <input type="text" name="tag"
+               value="{{ old('tag') }}"
+               placeholder="Ej: blackfriday, ofertas, verano"
+               list="tags-datalist-{{ $e ? 'edit' : 'create' }}"
+               autocomplete="off"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4a6b]/30 focus:border-[#1a4a6b]">
+        <datalist id="tags-datalist-{{ $e ? 'edit' : 'create' }}">
+            @foreach($tags ?? [] as $tagName => $tagSlug)
+                <option value="{{ $tagSlug }}">{{ $tagName }}</option>
+            @endforeach
+        </datalist>
+        <p class="text-xs text-gray-400 mt-1">Los productos con esta etiqueta aparecerán en la campaña.</p>
+    </div>
+
+    {{-- Categoría --}}
+    <div x-show="filterType === 'category'">
+        <select name="category_id"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4a6b]/30 focus:border-[#1a4a6b] bg-white">
+            <option value="">Seleccioná una categoría</option>
+            @foreach($categories ?? [] as $cat)
+                <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>
+                    @if($cat->parent){{ $cat->parent->name }} › @endif{{ $cat->name }}
+                </option>
+            @endforeach
+        </select>
+        <p class="text-xs text-gray-400 mt-1">Los productos de esta categoría aparecerán en la campaña.</p>
+    </div>
+
+    {{-- Marca --}}
+    <div x-show="filterType === 'brand'">
+        <select name="brand_id"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4a6b]/30 focus:border-[#1a4a6b] bg-white">
+            <option value="">Seleccioná una marca</option>
+            @foreach($brands ?? [] as $brand)
+                <option value="{{ $brand->id }}" {{ old('brand_id') == $brand->id ? 'selected' : '' }}>
+                    {{ $brand->name }}
+                </option>
+            @endforeach
+        </select>
+        <p class="text-xs text-gray-400 mt-1">Los productos de esta marca aparecerán en la campaña.</p>
+    </div>
 </div>
 
 {{-- Fechas + Orden --}}

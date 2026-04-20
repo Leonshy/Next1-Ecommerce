@@ -6,24 +6,49 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     @php
-        $seo = \App\Models\SeoSetting::forPage($seoPage ?? 'global');
-        $storeInfo = \App\Models\SiteContent::getByKey('store_info')?->metadata ?? [];
+        $storeInfo  = \App\Models\SiteContent::getByKey('store_info')?->metadata ?? [];
+        $storeName  = $storeInfo['name'] ?? config('app.name');
+        $seoDb      = \App\Models\SeoSetting::forPage($seoPage ?? 'global');
+
+        // $seoOverride (array) pasado desde el controlador tiene prioridad sobre la BD
+        $o          = $seoOverride ?? [];
+        $seoTitle       = $o['title']       ?? $seoDb?->meta_title       ?? $title ?? $storeName;
+        $seoDescription = $o['description'] ?? $seoDb?->meta_description ?? '';
+        $seoKeywords    = $o['keywords']    ?? $seoDb?->keywords          ?? '';
+        $seoCanonical   = $o['canonical']   ?? $seoDb?->canonical_url     ?? request()->url();
+        $seoOgImage     = $o['og_image']    ?? $seoDb?->og_image          ?? '';
+        $seoOgType      = $o['og_type']     ?? (isset($seoPage) && $seoPage === 'products' ? 'product' : 'website');
     @endphp
 
-    <title>{{ $seo?->meta_title ?? $title ?? config('app.name') }}</title>
+    <title>{{ $seoTitle }}</title>
 
     @if(!empty($storeInfo['faviconUrl']))
         <link rel="icon" href="{{ $storeInfo['faviconUrl'] }}">
     @endif
 
-    @if($seo?->meta_description)
-        <meta name="description" content="{{ $seo->meta_description }}">
+    {{-- Meta básicos --}}
+    <meta name="description" content="{{ $seoDescription }}">
+    @if($seoKeywords)
+        <meta name="keywords" content="{{ $seoKeywords }}">
     @endif
-    @if($seo?->keywords)
-        <meta name="keywords" content="{{ $seo->keywords }}">
+    <link rel="canonical" href="{{ $seoCanonical }}">
+
+    {{-- Open Graph --}}
+    <meta property="og:type"        content="{{ $seoOgType }}">
+    <meta property="og:title"       content="{{ $seoTitle }}">
+    <meta property="og:description" content="{{ $seoDescription }}">
+    <meta property="og:url"         content="{{ $seoCanonical }}">
+    <meta property="og:site_name"   content="{{ $storeName }}">
+    @if($seoOgImage)
+        <meta property="og:image"   content="{{ $seoOgImage }}">
     @endif
-    @if($seo?->og_image)
-        <meta property="og:image" content="{{ $seo->og_image }}">
+
+    {{-- Twitter Card --}}
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="{{ $seoTitle }}">
+    <meta name="twitter:description" content="{{ $seoDescription }}">
+    @if($seoOgImage)
+        <meta name="twitter:image"   content="{{ $seoOgImage }}">
     @endif
 
     <link rel="preconnect" href="https://fonts.googleapis.com">

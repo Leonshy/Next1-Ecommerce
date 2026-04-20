@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Campaign;
+use App\Models\Category;
 use App\Models\Tag;
 use Illuminate\Http\Request;
 
@@ -11,26 +13,36 @@ class AdminCampaignController extends Controller
 {
     public function index()
     {
-        $campaigns = Campaign::orderBy('display_order')->orderBy('name')->get();
-        $tags      = Tag::orderBy('name')->pluck('slug', 'name');
-        return view('admin.marketing.campaigns', compact('campaigns', 'tags'));
+        $campaigns  = Campaign::with(['category', 'brand'])->orderBy('display_order')->orderBy('name')->get();
+        $tags       = Tag::orderBy('name')->pluck('slug', 'name');
+        $categories = Category::orderBy('name')->get();
+        $brands     = Brand::orderBy('name')->get();
+        return view('admin.marketing.campaigns', compact('campaigns', 'tags', 'categories', 'brands'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'            => 'required|string|max:100',
-            'tag'             => 'nullable|string|max:50',
-            'description'     => 'nullable|string|max:500',
-            'banner_image'    => 'nullable|max:500',
-            'start_date'      => 'nullable|date',
-            'end_date'        => 'nullable|date|after_or_equal:start_date',
-            'display_order'   => 'nullable|integer|min:0',
+            'name'          => 'required|string|max:100',
+            'filter_type'   => 'required|in:tag,category,brand',
+            'tag'           => 'nullable|string|max:50',
+            'category_id'   => 'nullable|exists:categories,id',
+            'brand_id'      => 'nullable|exists:brands,id',
+            'description'   => 'nullable|string|max:500',
+            'banner_image'  => 'nullable|max:500',
+            'start_date'    => 'nullable|date',
+            'end_date'      => 'nullable|date|after_or_equal:start_date',
+            'display_order' => 'nullable|integer|min:0',
         ]);
 
         $data['display_on_home'] = $request->boolean('display_on_home');
         $data['is_active']       = $request->boolean('is_active');
         $data['display_order']   = $data['display_order'] ?? 0;
+
+        // Limpiar campos que no aplican al tipo seleccionado
+        if ($data['filter_type'] !== 'tag')      $data['tag']         = null;
+        if ($data['filter_type'] !== 'category') $data['category_id'] = null;
+        if ($data['filter_type'] !== 'brand')    $data['brand_id']    = null;
 
         Campaign::create($data);
 
@@ -42,18 +54,25 @@ class AdminCampaignController extends Controller
         $campaign = Campaign::findOrFail($id);
 
         $data = $request->validate([
-            'name'            => 'required|string|max:100',
-            'tag'             => 'nullable|string|max:50',
-            'description'     => 'nullable|string|max:500',
-            'banner_image'    => 'nullable|max:500',
-            'start_date'      => 'nullable|date',
-            'end_date'        => 'nullable|date|after_or_equal:start_date',
-            'display_order'   => 'nullable|integer|min:0',
+            'name'          => 'required|string|max:100',
+            'filter_type'   => 'required|in:tag,category,brand',
+            'tag'           => 'nullable|string|max:50',
+            'category_id'   => 'nullable|exists:categories,id',
+            'brand_id'      => 'nullable|exists:brands,id',
+            'description'   => 'nullable|string|max:500',
+            'banner_image'  => 'nullable|max:500',
+            'start_date'    => 'nullable|date',
+            'end_date'      => 'nullable|date|after_or_equal:start_date',
+            'display_order' => 'nullable|integer|min:0',
         ]);
 
         $data['display_on_home'] = $request->boolean('display_on_home');
         $data['is_active']       = $request->boolean('is_active');
         $data['display_order']   = $data['display_order'] ?? 0;
+
+        if ($data['filter_type'] !== 'tag')      $data['tag']         = null;
+        if ($data['filter_type'] !== 'category') $data['category_id'] = null;
+        if ($data['filter_type'] !== 'brand')    $data['brand_id']    = null;
 
         $campaign->update($data);
 

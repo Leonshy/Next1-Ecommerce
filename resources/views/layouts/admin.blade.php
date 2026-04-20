@@ -11,6 +11,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
     <style>
+        [x-cloak] { display: none !important; }
         :root {
             --brand-primary: #1a4a6b;
             --brand-accent:  #e07b1d;

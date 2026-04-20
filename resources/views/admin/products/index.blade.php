@@ -16,13 +16,76 @@
 
 {{-- Import result banner --}}
 @if(session('import_result'))
-    @php $result = session('import_result'); @endphp
-    <div class="mb-5 rounded-xl border p-4 {{ count($result['errors']) ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200' }}">
-        <p class="text-sm font-medium {{ count($result['errors']) ? 'text-yellow-800' : 'text-green-700' }}">
-            {{ $result['success'] }} producto(s) importado(s) correctamente.
+    @php
+        $result    = session('import_result');
+        $hasErrors = count($result['errors']) > 0;
+        $newCats   = $result['newCategories'] ?? [];
+        $newBrands = $result['newBrands'] ?? [];
+        $newTags   = $result['newTags'] ?? [];
+    @endphp
+    <div class="mb-5 rounded-xl border p-4 {{ $hasErrors ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200' }}">
+        <p class="text-sm font-semibold {{ $hasErrors ? 'text-yellow-800' : 'text-green-700' }} mb-3">
+            Importación completada
         </p>
-        @if(count($result['errors']))
-            <ul class="mt-2 space-y-0.5 text-xs text-red-600 list-disc list-inside">
+        <div class="flex flex-wrap gap-2">
+            @if($result['created'] > 0)
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-100 text-green-700 text-xs font-medium">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    {{ $result['created'] }} producto{{ $result['created'] !== 1 ? 's' : '' }} nuevo{{ $result['created'] !== 1 ? 's' : '' }}
+                </span>
+            @endif
+            @if($result['updated'] > 0)
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    {{ $result['updated'] }} producto{{ $result['updated'] !== 1 ? 's' : '' }} actualizado{{ $result['updated'] !== 1 ? 's' : '' }}
+                </span>
+            @endif
+            @if(count($newCats) > 0)
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-100 text-purple-700 text-xs font-medium"
+                      title="{{ implode(', ', $newCats) }}">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    {{ count($newCats) }} categoría{{ count($newCats) !== 1 ? 's' : '' }} creada{{ count($newCats) !== 1 ? 's' : '' }}
+                </span>
+            @endif
+            @if(count($newBrands) > 0)
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-100 text-orange-700 text-xs font-medium"
+                      title="{{ implode(', ', $newBrands) }}">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                    {{ count($newBrands) }} marca{{ count($newBrands) !== 1 ? 's' : '' }} creada{{ count($newBrands) !== 1 ? 's' : '' }}
+                </span>
+            @endif
+            @if(count($newTags) > 0)
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium"
+                      title="{{ implode(', ', $newTags) }}">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                    {{ count($newTags) }} etiqueta{{ count($newTags) !== 1 ? 's' : '' }} creada{{ count($newTags) !== 1 ? 's' : '' }}
+                </span>
+            @endif
+            @if($hasErrors)
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-medium">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    {{ count($result['errors']) }} error{{ count($result['errors']) !== 1 ? 'es' : '' }}
+                </span>
+            @endif
+            @if($result['created'] === 0 && $result['updated'] === 0 && !$hasErrors)
+                <span class="text-gray-500 text-xs">No se procesó ningún producto.</span>
+            @endif
+        </div>
+        @if(count($newCats) > 0 || count($newBrands) > 0 || count($newTags) > 0)
+            <div class="mt-3 text-xs text-gray-500 space-y-1">
+                @if(count($newCats) > 0)
+                    <p><span class="font-medium text-purple-700">Categorías:</span> {{ implode(', ', $newCats) }}</p>
+                @endif
+                @if(count($newBrands) > 0)
+                    <p><span class="font-medium text-orange-700">Marcas:</span> {{ implode(', ', $newBrands) }}</p>
+                @endif
+                @if(count($newTags) > 0)
+                    <p><span class="font-medium text-gray-700">Etiquetas:</span> {{ implode(', ', $newTags) }}</p>
+                @endif
+            </div>
+        @endif
+        @if($hasErrors)
+            <ul class="mt-3 space-y-0.5 text-xs text-red-600 list-disc list-inside">
                 @foreach($result['errors'] as $err)<li>{{ $err }}</li>@endforeach
             </ul>
         @endif
@@ -335,6 +398,14 @@
                                 <td class="px-4 py-3 text-gray-500 text-sm">{{ $product->category?->name ?? '—' }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-2">
+                                        <span x-data="{ c: false }" title="Copiar enlace del producto">
+                                            <button @click="navigator.clipboard.writeText('{{ route('products.show', $product->slug) }}'); c = true; setTimeout(() => c = false, 1500)"
+                                                    :class="c ? 'text-green-500' : 'text-gray-400 hover:text-[#1a4a6b]'"
+                                                    class="transition-colors" :title="c ? '¡Copiado!' : 'Copiar enlace'">
+                                                <svg x-show="!c" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                                <svg x-show="c" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            </button>
+                                        </span>
                                         <a href="{{ route('admin.productos.edit', $product->id) }}" class="text-xs font-medium hover:underline" style="color:#1a4a6b">Editar</a>
                                         <form method="POST" action="{{ route('admin.productos.destroy', $product->id) }}" onsubmit="return confirm('¿Eliminar este producto?')">
                                             @csrf @method('DELETE')
@@ -410,12 +481,18 @@
                                     <span class="ml-2 text-xs text-gray-400">{{ $count }} producto(s)</span>
                                 @endif
                             </div>
-                            <div class="flex items-center gap-2" x-data="{ open: false }">
+                            <div class="flex items-center gap-2" x-data="{ open: false, c: false }">
+                                <button @click="navigator.clipboard.writeText('{{ route('products.index', ['categoria' => $cat->slug]) }}'); c = true; setTimeout(() => c = false, 1500)"
+                                        :class="c ? 'text-green-500' : 'text-gray-400 hover:text-[#1a4a6b]'"
+                                        class="transition-colors" :title="c ? '¡Copiado!' : 'Copiar enlace'">
+                                    <svg x-show="!c" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                    <svg x-show="c" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                </button>
                                 {{-- Edit inline --}}
                                 <button @click="open = true; $nextTick(() => $refs.editInput{{ $cat->id }}.focus())"
                                         class="text-xs font-medium hover:underline" style="color:#1a4a6b">Editar</button>
                                 <form method="POST" action="{{ route('admin.categorias.destroy', $cat->id) }}"
-                                      onsubmit="return confirm('¿Eliminar {{ addslashes($cat->name) }}?')">
+                                      onsubmit="return confirm('¿Eliminar {{ addslashes($cat->name) }}?')">&gt;
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-xs font-medium text-red-500 hover:underline">Eliminar</button>
                                 </form>
@@ -482,7 +559,13 @@
                                     <span class="ml-2 text-xs text-gray-400">{{ $brand->products_count }} producto(s)</span>
                                 @endif
                             </div>
-                            <div class="flex items-center gap-2" x-data="{ open: false }">
+                            <div class="flex items-center gap-2" x-data="{ open: false, c: false }">
+                                <button @click="navigator.clipboard.writeText('{{ route('products.index', ['marca' => $brand->slug]) }}'); c = true; setTimeout(() => c = false, 1500)"
+                                        :class="c ? 'text-green-500' : 'text-gray-400 hover:text-[#1a4a6b]'"
+                                        class="transition-colors" :title="c ? '¡Copiado!' : 'Copiar enlace'">
+                                    <svg x-show="!c" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                    <svg x-show="c" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                </button>
                                 <button @click="open = true; $nextTick(() => $refs.brandInput{{ $brand->id }}.focus())"
                                         class="text-xs font-medium hover:underline" style="color:#1a4a6b">Editar</button>
                                 <form method="POST" action="{{ route('admin.marcas.destroy', $brand->id) }}"
@@ -559,7 +642,7 @@
                             @endphp
                             <div class="flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full border group"
                                  style="{{ $isProtected ? 'border-color:rgba(224,123,29,0.35); background:rgba(224,123,29,0.08)' : 'border-color:#e5e7eb; background:#f9fafb' }}"
-                                 x-data="{ open: false }">
+                                 x-data="{ open: false, c: false }">
                                 <span class="text-sm font-medium" style="{{ $isProtected ? 'color:#e07b1d' : 'color:#374151' }}">{{ $tag->name }}</span>
                                 <span class="text-xs font-mono" style="{{ $isProtected ? 'color:rgba(224,123,29,0.6)' : 'color:#9ca3af' }}">#{{ $tag->slug }}</span>
                                 @if($isProtected)
@@ -571,6 +654,13 @@
                                     <span class="text-xs text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full">{{ $usageCount }}</span>
                                 @endif
 
+                                <button @click="navigator.clipboard.writeText('{{ route('products.index', ['tag' => $tag->slug]) }}'); c = true; setTimeout(() => c = false, 1500)"
+                                        :class="c ? 'text-green-500' : 'text-gray-400 hover:text-[#1a4a6b]'"
+                                        class="w-5 h-5 rounded-full flex items-center justify-center hover:bg-[#1a4a6b]/10 transition-colors opacity-0 group-hover:opacity-100"
+                                        :title="c ? '¡Copiado!' : 'Copiar enlace'">
+                                    <svg x-show="!c" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                    <svg x-show="c" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                </button>
                                 <button @click="open = true; $nextTick(() => $refs.tagInput{{ $tag->id }}.focus())"
                                         class="w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-[#1a4a6b] hover:bg-[#1a4a6b]/10 transition-colors opacity-0 group-hover:opacity-100">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>

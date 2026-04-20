@@ -40,7 +40,7 @@
             <tr>
                 <th class="px-5 py-3 text-left w-8">#</th>
                 <th class="px-5 py-3 text-left">Campaña</th>
-                <th class="px-5 py-3 text-left">Etiqueta</th>
+                <th class="px-5 py-3 text-left">Filtro</th>
                 <th class="px-5 py-3 text-left">Período</th>
                 <th class="px-5 py-3 text-center">En inicio</th>
                 <th class="px-5 py-3 text-center">Estado</th>
@@ -74,9 +74,19 @@
                         </div>
                     </td>
                     <td class="px-5 py-3">
-                        @if($campaign->tag)
+                        @if($campaign->filter_type === 'category' && $campaign->category)
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                {{ $campaign->category->name }}
+                            </span>
+                        @elseif($campaign->filter_type === 'brand' && $campaign->brand)
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                                {{ $campaign->brand->name }}
+                            </span>
+                        @elseif($campaign->tag)
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                                {{ $campaign->tag }}
+                                #{{ $campaign->tag }}
                             </span>
                         @else
                             <span class="text-gray-300 text-xs">—</span>
@@ -104,7 +114,22 @@
                         </span>
                     </td>
                     <td class="px-5 py-3">
-                        <div class="flex items-center gap-3">
+                        @php
+                            $campUrl = match($campaign->filter_type) {
+                                'category' => $campaign->category ? route('products.index', ['categoria' => $campaign->category->slug]) : '',
+                                'brand'    => $campaign->brand    ? route('products.index', ['marca'     => $campaign->brand->slug])    : '',
+                                default    => $campaign->tag      ? route('products.index', ['tag'       => $campaign->tag])            : '',
+                            };
+                        @endphp
+                        <div class="flex items-center gap-3" x-data="{ c: false }">
+                            @if($campUrl)
+                            <button @click="navigator.clipboard.writeText('{{ $campUrl }}'); c = true; setTimeout(() => c = false, 1500)"
+                                    :class="c ? 'text-green-500' : 'text-gray-400 hover:text-[#1a4a6b]'"
+                                    class="transition-colors" :title="c ? '¡Copiado!' : 'Copiar enlace'">
+                                <svg x-show="!c" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                <svg x-show="c" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </button>
+                            @endif
                             <button onclick="openEdit('{{ $campaign->id }}', {{ json_encode($campaign->toArray()) }})"
                                     class="text-xs font-medium hover:underline" style="color:#1a4a6b">
                                 Editar
@@ -204,14 +229,21 @@ function openEdit(id, data) {
         else el.value = value ?? '';
     };
 
-    set('name',            data.name);
-    set('tag',             data.tag);
-    set('description',     data.description);
-    set('start_date',      data.start_date);
-    set('end_date',        data.end_date);
-    set('display_order',   data.display_order);
+    set('name',          data.name);
+    set('tag',           data.tag);
+    set('category_id',   data.category_id);
+    set('brand_id',      data.brand_id);
+    set('description',   data.description);
+    set('start_date',    data.start_date);
+    set('end_date',      data.end_date);
+    set('display_order', data.display_order);
     set('display_on_home', data.display_on_home);
-    set('is_active',       data.is_active);
+    set('is_active',     data.is_active);
+
+    // Actualizar el tipo de filtro en Alpine
+    window.dispatchEvent(new CustomEvent('campaign-set-filter', {
+        detail: { filterType: data.filter_type ?? 'tag' }
+    }));
 
     // Enviar imagen al picker vía evento de ventana
     window.dispatchEvent(new CustomEvent('campaign-set-image', {

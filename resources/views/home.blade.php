@@ -433,6 +433,102 @@
         </div>
     </section>
 
+    {{-- ========= CAMPAÑAS ========= --}}
+    @foreach($campaigns as $campaign)
+    @php
+        $campaignProducts = \App\Models\Product::active()
+            ->when($campaign->tag, fn($q) => $q->whereJsonContains('tags', $campaign->tag))
+            ->with(['category', 'brand'])
+            ->limit(8)
+            ->get();
+    @endphp
+    <section class="py-6">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-12 gap-6 items-stretch"
+                 x-data="{ cur: 0, total: {{ $campaignProducts->count() }}, perPage: 4 }"
+                 x-init="perPage = window.innerWidth < 640 ? 2 : 4; window.addEventListener('resize', () => { perPage = window.innerWidth < 640 ? 2 : 4; cur = Math.min(cur, Math.max(0, total - perPage)); })">
+
+                {{-- Banner campaña (3 cols) --}}
+                <div class="col-span-12 lg:col-span-3 flex flex-col">
+                    <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"
+                       class="relative flex flex-col flex-1 rounded-xl overflow-hidden group min-h-[180px] sm:min-h-[260px] md:min-h-[320px]"
+                       style="background: linear-gradient(135deg, #1a3a5c 0%, #0f2035 100%)"
+                        @if($campaign->banner_image)
+                            <img src="{{ $campaign->banner_image }}"
+                                 alt="{{ $campaign->name }}"
+                                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                 onerror="this.remove()">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                        @endif
+                        <div class="relative z-10 flex flex-col justify-end flex-1 p-5">
+                            <h3 class="text-white font-black text-xl leading-tight">{{ $campaign->name }}</h3>
+                            @if($campaign->description)
+                                <p class="text-white/80 text-sm mt-2 leading-snug">{{ $campaign->description }}</p>
+                            @endif
+                            <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-white border border-white/40 px-4 py-2 rounded-lg hover:bg-white hover:text-gray-900 transition-colors w-fit">
+                                Ver todos
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </span>
+                        </div>
+                    </a>
+                </div>
+
+                {{-- Productos de la campaña (9 cols) --}}
+                <div class="col-span-12 lg:col-span-9">
+                    {{-- Header --}}
+                    <div class="flex items-center justify-between mb-6 border-b-2 border-border">
+                        <div class="flex items-center">
+                            <h2 class="bg-destructive text-white font-bold text-sm uppercase px-6 py-3 relative">
+                                {{ strtoupper($campaign->name) }}
+                                <span class="absolute -right-3 top-0 h-full w-3 bg-destructive"
+                                      style="clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
+                            </h2>
+                        </div>
+                        <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"
+                           class="flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-colors pb-2">
+                            Ver todos
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+
+                    @if($campaignProducts->count())
+                    {{-- Carrusel --}}
+                    <div class="flex items-center gap-2">
+                        <button @click="cur = Math.max(0, cur - 1)"
+                                :disabled="cur === 0"
+                                class="w-8 h-8 rounded-full border border-border bg-white flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7-7-7 7 7 7"/></svg>
+                        </button>
+
+                        <div class="overflow-hidden flex-1">
+                            <div class="flex transition-transform duration-300"
+                                 :style="'transform:translateX(-' + (cur * 100 / perPage) + '%)'">
+                                @foreach($campaignProducts as $product)
+                                    <div class="flex-shrink-0 pl-4" :style="'flex:0 0 '+(100/perPage)+'%;max-width:'+(100/perPage)+'%'">
+                                        @include('partials.product-card', ['product' => $product])
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <button @click="cur = Math.min(total - perPage, cur + 1)"
+                                :disabled="cur >= total - perPage"
+                                class="w-8 h-8 rounded-full border border-border bg-white flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7 7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                    @else
+                    <p class="text-sm text-gray-400 py-8 text-center">No hay productos asociados a esta campaña.</p>
+                    @endif
+                </div>
+
+            </div>
+        </div>
+    </section>
+    @endforeach
+
     {{-- ========= MARCAS + DESTACADOS (lado a lado) ========= --}}
     @if($featured->count())
     <section class="py-8">
@@ -551,100 +647,5 @@
     </section>
     @endif
 
-    {{-- ========= CAMPAÑAS (debajo de nuevos productos) ========= --}}
-    @foreach($campaigns as $campaign)
-    @php
-        $campaignProducts = \App\Models\Product::active()
-            ->when($campaign->tag, fn($q) => $q->whereJsonContains('tags', $campaign->tag))
-            ->with(['category', 'brand'])
-            ->limit(8)
-            ->get();
-    @endphp
-    <section class="py-6">
-        <div class="container mx-auto px-4">
-            <div class="grid grid-cols-12 gap-6 items-stretch"
-                 x-data="{ cur: 0, total: {{ $campaignProducts->count() }}, perPage: 4 }"
-                 x-init="perPage = window.innerWidth < 640 ? 2 : 4; window.addEventListener('resize', () => { perPage = window.innerWidth < 640 ? 2 : 4; cur = Math.min(cur, Math.max(0, total - perPage)); })">
-
-                {{-- Banner campaña (3 cols) --}}
-                <div class="col-span-12 lg:col-span-3 flex flex-col">
-                    <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"
-                       class="relative flex flex-col flex-1 rounded-xl overflow-hidden group min-h-[180px] sm:min-h-[260px] md:min-h-[320px]"
-                       style="background: linear-gradient(135deg, #1a3a5c 0%, #0f2035 100%)"
-                        @if($campaign->banner_image)
-                            <img src="{{ $campaign->banner_image }}"
-                                 alt="{{ $campaign->name }}"
-                                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                 onerror="this.remove()">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                        @endif
-                        <div class="relative z-10 flex flex-col justify-end flex-1 p-5">
-                            <h3 class="text-white font-black text-xl leading-tight">{{ $campaign->name }}</h3>
-                            @if($campaign->description)
-                                <p class="text-white/80 text-sm mt-2 leading-snug">{{ $campaign->description }}</p>
-                            @endif
-                            <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-white border border-white/40 px-4 py-2 rounded-lg hover:bg-white hover:text-gray-900 transition-colors w-fit">
-                                Ver todos
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                </svg>
-                            </span>
-                        </div>
-                    </a>
-                </div>
-
-                {{-- Productos de la campaña (9 cols) --}}
-                <div class="col-span-12 lg:col-span-9">
-                    {{-- Header --}}
-                    <div class="flex items-center justify-between mb-6 border-b-2 border-border">
-                        <div class="flex items-center">
-                            <h2 class="bg-destructive text-white font-bold text-sm uppercase px-6 py-3 relative">
-                                {{ strtoupper($campaign->name) }}
-                                <span class="absolute -right-3 top-0 h-full w-3 bg-destructive"
-                                      style="clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
-                            </h2>
-                        </div>
-                        <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"
-                           class="flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-colors pb-2">
-                            Ver todos
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </a>
-                    </div>
-
-                    @if($campaignProducts->count())
-                    {{-- Carrusel --}}
-                    <div class="flex items-center gap-2">
-                        <button @click="cur = Math.max(0, cur - 1)"
-                                :disabled="cur === 0"
-                                class="w-8 h-8 rounded-full border border-border bg-white flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7-7-7 7 7 7"/></svg>
-                        </button>
-
-                        <div class="overflow-hidden flex-1">
-                            <div class="flex transition-transform duration-300"
-                                 :style="'transform:translateX(-' + (cur * 100 / perPage) + '%)'">
-                                @foreach($campaignProducts as $product)
-                                    <div class="flex-shrink-0 pl-4" :style="'flex:0 0 '+(100/perPage)+'%;max-width:'+(100/perPage)+'%'">
-                                        @include('partials.product-card', ['product' => $product])
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <button @click="cur = Math.min(total - perPage, cur + 1)"
-                                :disabled="cur >= total - perPage"
-                                class="w-8 h-8 rounded-full border border-border bg-white flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7 7 7-7 7"/></svg>
-                        </button>
-                    </div>
-                    @else
-                    <p class="text-sm text-gray-400 py-8 text-center">No hay productos asociados a esta campaña.</p>
-                    @endif
-                </div>
-
-            </div>
-        </div>
-    </section>
-    @endforeach
 
 </x-app-layout>

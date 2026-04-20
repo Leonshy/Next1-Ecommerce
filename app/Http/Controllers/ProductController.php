@@ -61,7 +61,7 @@ class ProductController extends Controller
         $categories = Category::active()->root()->with('children')->orderBy('display_order')->get();
         $brands     = Brand::active()->orderBy('name')->get();
 
-        return view('products.index', compact('products', 'categories', 'brands'));
+        return view('products.index', compact('products', 'categories', 'brands') + ['seoPage' => 'products']);
     }
 
     public function show(string $slug)
@@ -73,7 +73,17 @@ class ProductController extends Controller
             ->limit(4)
             ->get();
 
-        return view('products.show', compact('product', 'related'));
+        $seoOverride = [
+            'title'       => $product->name . ' — ' . (optional($product->brand)->name ?? config('app.name')),
+            'description' => $product->description
+                ? mb_substr(strip_tags($product->description), 0, 155) . '…'
+                : $product->name,
+            'og_image'    => $product->mainImage?->image_url ?? '',
+            'canonical'   => route('productos.show', $product->slug),
+            'og_type'     => 'product',
+        ];
+
+        return view('products.show', compact('product', 'related', 'seoOverride') + ['seoPage' => 'products']);
     }
 
     public function search(Request $request)

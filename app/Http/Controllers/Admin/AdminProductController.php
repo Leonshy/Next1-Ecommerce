@@ -138,12 +138,18 @@ class AdminProductController extends Controller
             return back()->withErrors(['file' => 'El archivo está vacío o no tiene el formato correcto.']);
         }
 
-        $categories = Category::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id]);
-        $brands     = Brand::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id]);
+        // Cache local para evitar queries repetidas y registrar los creados automáticamente
+        $categoryCache    = Category::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id])->toArray();
+        $brandCache       = Brand::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id])->toArray();
+        $tagCache         = Tag::pluck('slug', 'slug')->toArray();
 
-        $success = 0;
-        $errors  = [];
-        $rowNum  = 1;
+        $created          = 0;
+        $updated          = 0;
+        $newCategories    = [];
+        $newBrands        = [];
+        $newTags          = [];
+        $errors           = [];
+        $rowNum           = 1;
 
         foreach ($rows as $data) {
             $rowNum++;
@@ -154,20 +160,59 @@ class AdminProductController extends Controller
             $price = (float) str_replace([',', ' '], '', $data['precio'] ?? $data['price'] ?? '0');
             if ($price <= 0) { $errors[] = "Fila {$rowNum}: precio inválido para \"{$name}\"."; continue; }
 
-            $categoryName  = strtolower(trim($data['categoria']      ?? $data['category']     ?? ''));
-            $brandName     = strtolower(trim($data['marca']          ?? $data['brand']        ?? ''));
+            $categoryName  = trim($data['categoria'] ?? $data['category'] ?? '');
+            $brandName     = trim($data['marca']     ?? $data['brand']    ?? '');
             $originalPrice = trim($data['precio_original'] ?? $data['original_price'] ?? '');
-            $tagsRaw       = trim($data['etiquetas']       ?? $data['tags']           ?? '');
-            $tags          = $tagsRaw ? array_map('trim', explode(',', $tagsRaw)) : [];
+            $tagsRaw       = trim($data['etiquetas'] ?? $data['tags'] ?? '');
+            $tagNames      = $tagsRaw ? array_filter(array_map('trim', explode(',', $tagsRaw))) : [];
             $slug          = $this->uniqueSlug(Str::slug($data['slug'] ?? $name));
             $imageUrl      = trim($data['imagen'] ?? $data['image'] ?? '');
 
             try {
-                $categoryId = $categoryName ? ($categories[$categoryName] ?? null) : null;
-                $skuRaw     = trim($data['sku'] ?? '');
-                $sku        = $skuRaw ?: null;
+                // Auto-crear categoría si no existe
+                $categoryId = null;
+                if ($categoryName) {
+                    $key = strtolower($categoryName);
+                    if (!isset($categoryCache[$key])) {
+                        $catSlug = Str::slug($categoryName);
+                        $base = $catSlug; $i = 2;
+                        while (Category::where('slug', $catSlug)->exists()) { $catSlug = "{$base}-{$i}"; $i++; }
+                        $cat = Category::create(['name' => $categoryName, 'slug' => $catSlug, 'is_active' => true]);
+                        $categoryCache[$key] = $cat->id;
+                        $newCategories[] = $categoryName;
+                    }
+                    $categoryId = $categoryCache[$key];
+                }
 
-                $attributes = $sku ? ['sku' => $sku] : ['slug' => $slug];
+                // Auto-crear marca si no existe
+                $brandId = null;
+                if ($brandName) {
+                    $key = strtolower($brandName);
+                    if (!isset($brandCache[$key])) {
+                        $brandSlug = Str::slug($brandName);
+                        $base = $brandSlug; $i = 2;
+                        while (Brand::where('slug', $brandSlug)->exists()) { $brandSlug = "{$base}-{$i}"; $i++; }
+                        $brand = Brand::create(['name' => $brandName, 'slug' => $brandSlug, 'is_active' => true]);
+                        $brandCache[$key] = $brand->id;
+                        $newBrands[] = $brandName;
+                    }
+                    $brandId = $brandCache[$key];
+                }
+
+                // Auto-crear etiquetas que no existan y normalizar a slugs
+                $tagSlugs = [];
+                foreach ($tagNames as $tagName) {
+                    $tagSlug = Str::slug($tagName);
+                    if (!isset($tagCache[$tagSlug])) {
+                        Tag::firstOrCreate(['slug' => $tagSlug], ['name' => $tagName]);
+                        $tagCache[$tagSlug] = $tagSlug;
+                        $newTags[] = $tagName;
+                    }
+                    $tagSlugs[] = $tagSlug;
+                }
+
+                $skuRaw = trim($data['sku'] ?? '');
+                $sku    = $skuRaw ?: null;
 
                 $existing = $sku
                     ? Product::where('sku', $sku)->first()
@@ -180,9 +225,9 @@ class AdminProductController extends Controller
                     'original_price' => $originalPrice !== '' ? (float) $originalPrice : null,
                     'stock'          => (int) ($data['stock'] ?? 0),
                     'category_id'    => $categoryId,
-                    'brand_id'       => $brandName ? ($brands[$brandName] ?? null) : null,
+                    'brand_id'       => $brandId,
                     'badge'          => trim($data['badge'] ?? '') ?: null,
-                    'tags'           => $tags,
+                    'tags'           => $tagSlugs,
                     'is_active'      => !in_array(strtolower(trim($data['activo']    ?? $data['is_active']   ?? 'true')),  ['false', '0', 'no']),
                     'is_featured'    =>  in_array(strtolower(trim($data['destacado'] ?? $data['is_featured'] ?? 'false')), ['true',  '1', 'si', 'sí']),
                     'is_new'         =>  in_array(strtolower(trim($data['nuevo']     ?? $data['is_new']      ?? 'false')), ['true',  '1', 'si', 'sí']),
@@ -192,10 +237,12 @@ class AdminProductController extends Controller
                 if ($existing) {
                     $existing->update($productData);
                     $product = $existing;
+                    $updated++;
                 } else {
                     $productData['slug'] = $this->uniqueSlug(Str::slug($data['slug'] ?? $name));
                     $productData['sku']  = $sku ?? Product::generateSku($categoryId);
                     $product = Product::create($productData);
+                    $created++;
                 }
 
                 if ($imageUrl && !$product->mainImage) {
@@ -209,13 +256,16 @@ class AdminProductController extends Controller
                     ]);
                 }
 
-                $success++;
             } catch (\Exception $e) {
                 $errors[] = "Fila {$rowNum} (\"{$name}\"): " . $e->getMessage();
             }
         }
 
-        return redirect()->route('admin.productos.index')->with('import_result', compact('success', 'errors'));
+        $newCategories = array_unique($newCategories);
+        $newBrands     = array_unique($newBrands);
+        $newTags       = array_unique($newTags);
+
+        return redirect()->route('admin.productos.index')->with('import_result', compact('created', 'updated', 'newCategories', 'newBrands', 'newTags', 'errors'));
     }
 
     /** Parsea CSV o Excel y devuelve array de rows asociativas */
