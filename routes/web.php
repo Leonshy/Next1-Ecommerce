@@ -176,17 +176,17 @@ Route::middleware(['auth', 'role:admin,vendedor', 'admin.timeout', 'admin.audit'
     // Configuración (solo admin)
     Route::middleware('role:admin')->prefix('configuracion')->name('settings.')->group(function () {
         Route::get('envios', [AdminSettingsController::class, 'shipping'])->name('shipping');
-        Route::post('envios', [AdminSettingsController::class, 'updateShipping'])->name('shipping.update');
+        Route::match(['POST', 'PUT'], 'envios', [AdminSettingsController::class, 'updateShipping'])->name('shipping.update');
 
         Route::get('pagos', [AdminSettingsController::class, 'payments'])->name('payments');
         Route::post('pagos/{provider}', [AdminSettingsController::class, 'updatePayment'])->name('payments.update');
         Route::post('pagos/{provider}/validate', [AdminSettingsController::class, 'validatePayment'])->name('payments.validate');
 
         Route::get('seo', [AdminSettingsController::class, 'seo'])->name('seo');
-        Route::post('seo', [AdminSettingsController::class, 'updateSeo'])->name('seo.update');
+        Route::match(['POST', 'PUT'], 'seo', [AdminSettingsController::class, 'updateSeo'])->name('seo.update');
 
         Route::get('analytics', [AdminSettingsController::class, 'analytics'])->name('analytics');
-        Route::post('analytics', [AdminSettingsController::class, 'updateAnalytics'])->name('analytics.update');
+        Route::match(['POST', 'PUT'], 'analytics', [AdminSettingsController::class, 'updateAnalytics'])->name('analytics.update');
 
         Route::get('email', [AdminSettingsController::class, 'email'])->name('email');
         Route::post('email', [AdminSettingsController::class, 'updateEmail'])->name('email.update');
