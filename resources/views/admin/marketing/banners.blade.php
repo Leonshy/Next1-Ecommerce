@@ -22,15 +22,18 @@
 </div>
 
 {{-- Tabs --}}
-<div x-data="{ tab: window.location.hash.slice(1) || 'slides' }">
+<div x-data="{
+        tab: sessionStorage.getItem('admin_tab_banners') || 'slides',
+        setTab(t) { this.tab = t; sessionStorage.setItem('admin_tab_banners', t); }
+     }">
 
     <div class="flex gap-1 mb-6 bg-white border border-gray-200 rounded-xl p-1 w-fit">
-        <button @click="tab = 'slides'; window.location.hash = 'slides'"
+        <button @click="setTab('slides')"
                 :class="tab === 'slides' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'"
                 class="px-5 py-1.5 rounded-lg text-sm font-medium transition-colors">
             Slide Principal
         </button>
-        <button @click="tab = 'banners'; window.location.hash = 'banners'"
+        <button @click="setTab('banners')"
                 :class="tab === 'banners' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'"
                 class="px-5 py-1.5 rounded-lg text-sm font-medium transition-colors">
             Anuncios

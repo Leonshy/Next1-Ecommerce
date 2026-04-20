@@ -19,12 +19,15 @@
         ];
         @endphp
 
-        <div x-data="{ tab: window.location.hash.slice(1) || 'home' }" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div x-data="{
+                tab: sessionStorage.getItem('admin_tab_seo') || 'home',
+                setTab(t) { this.tab = t; sessionStorage.setItem('admin_tab_seo', t); }
+             }" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
 
             {{-- Tabs --}}
             <div class="flex border-b border-gray-200 overflow-x-auto">
                 @foreach($pageLabels as $key => $label)
-                <button type="button" @click="tab = '{{ $key }}'; window.location.hash = '{{ $key }}'"
+                <button type="button" @click="setTab('{{ $key }}')"
                         :class="tab === '{{ $key }}' ? 'border-b-2 border-[#1a4a6b] text-[#1a4a6b]' : 'text-gray-500 hover:text-gray-700'"
                         class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0">
                     {{ $label }}
