@@ -22,15 +22,15 @@
 </div>
 
 {{-- Tabs --}}
-<div x-data="{ tab: '{{ request('tab', 'slides') }}' }">
+<div x-data="{ tab: window.location.hash.slice(1) || 'slides' }">
 
     <div class="flex gap-1 mb-6 bg-white border border-gray-200 rounded-xl p-1 w-fit">
-        <button @click="tab = 'slides'"
+        <button @click="tab = 'slides'; window.location.hash = 'slides'"
                 :class="tab === 'slides' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'"
                 class="px-5 py-1.5 rounded-lg text-sm font-medium transition-colors">
             Slide Principal
         </button>
-        <button @click="tab = 'banners'"
+        <button @click="tab = 'banners'; window.location.hash = 'banners'"
                 :class="tab === 'banners' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'"
                 class="px-5 py-1.5 rounded-lg text-sm font-medium transition-colors">
             Anuncios

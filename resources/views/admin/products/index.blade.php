@@ -99,11 +99,11 @@
 </div>
 
 {{-- ── Tabs ───────────────────────────────────────────────────────────────── --}}
-<div x-data="{ tab: '{{ request('tab', 'productos') }}' }">
+<div x-data="{ tab: window.location.hash.slice(1) || 'productos' }">
 
     <div class="flex gap-1 border-b border-gray-200 mb-6">
         @foreach(['productos' => 'Productos', 'categorias' => 'Categorías', 'marcas' => 'Marcas', 'etiquetas' => 'Etiquetas'] as $key => $label)
-            <button type="button" @click="tab = '{{ $key }}'"
+            <button type="button" @click="tab = '{{ $key }}'; window.location.hash = '{{ $key }}'"
                     :class="tab === '{{ $key }}' ? 'border-[#1a4a6b] text-[#1a4a6b]' : 'border-transparent text-gray-500 hover:text-gray-700'"
                     class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors">
                 {{ $label }}
