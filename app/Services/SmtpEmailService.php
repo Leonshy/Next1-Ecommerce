@@ -11,6 +11,38 @@ use Illuminate\Mail\Message;
 
 class SmtpEmailService
 {
+    // ── Template rendering ────────────────────────────────────────────────────
+
+    private function renderTemplate(string $key, array $vars): ?array
+    {
+        try {
+            $template = \App\Models\EmailTemplate::where('template_key', $key)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$template) {
+                return null;
+            }
+
+            $subject = $template->subject;
+            $body    = $template->body_html;
+
+            foreach ($vars as $placeholder => $value) {
+                $subject = str_replace('{{' . $placeholder . '}}', $value, $subject);
+                $body    = str_replace('{{' . $placeholder . '}}', $value, $body);
+            }
+
+            return ['subject' => $subject, 'body' => $body];
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    public function buildPreviewHtml(string $storeName, string $innerHtml): string
+    {
+        return $this->wrapEmail($storeName, $innerHtml);
+    }
+
     // ── Newsletter ────────────────────────────────────────────────────────────
 
     public function sendNewsletterVerification(string $email, string $token): bool
@@ -18,6 +50,16 @@ class SmtpEmailService
         $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
         $url       = url('/newsletter/verificar/' . $token);
         $expires   = now()->addDays(30)->format('d/m/Y');
+
+        $rendered = $this->renderTemplate('newsletter_verification', [
+            'store_name' => $storeName,
+            'url'        => $url,
+            'expires'    => $expires,
+        ]);
+
+        if ($rendered) {
+            return $this->sendHtmlSilent($email, $rendered['subject'], $this->wrapEmail($storeName, $rendered['body']));
+        }
 
         $html = $this->wrapEmail($storeName, "
             <div style='text-align:center;padding:10px 0 24px;'>
@@ -71,6 +113,29 @@ class SmtpEmailService
             ? 'Estamos validando tu comprobante de transferencia. Te notificaremos cuando confirmemos el pago.'
             : 'Tu pedido fue recibido y está siendo procesado.';
 
+        $discountRow = $order->discount > 0
+            ? "<tr><td style='padding:5px 0;color:#16a34a;font-size:14px;'>Descuento</td><td style='padding:5px 0;text-align:right;font-size:14px;color:#16a34a;'>-Gs. " . number_format($order->discount, 0, ',', '.') . "</td></tr>"
+            : '';
+
+        $rendered = $this->renderTemplate('order_confirmation', [
+            'store_name'       => $storeName,
+            'customer_name'    => $order->customer_name,
+            'order_number'     => $order->order_number,
+            'created_at'       => $order->created_at->format('d/m/Y H:i'),
+            'items_table'      => $this->buildItemsTable($order),
+            'subtotal'         => number_format($order->subtotal, 0, ',', '.'),
+            'shipping_cost'    => $order->shipping_cost > 0 ? 'Gs. ' . number_format($order->shipping_cost, 0, ',', '.') : 'Gratis',
+            'discount_row'     => $discountRow,
+            'total'            => number_format($order->total, 0, ',', '.'),
+            'payment_method'   => $methodLabel,
+            'shipping_address' => $order->shipping_address . ', ' . $order->shipping_city,
+            'status_message'   => $statusMsg,
+        ]);
+
+        if ($rendered) {
+            return $this->sendHtmlSilent($order->customer_email, $rendered['subject'], $this->wrapEmail($storeName, $rendered['body']));
+        }
+
         $html = $this->wrapEmail($storeName, "
             <h2 style='margin:0 0 8px;font-size:22px;color:#1a537a;'>¡Gracias por tu pedido!</h2>
             <p style='margin:0 0 20px;color:#555;font-size:15px;'>Hola <strong>{$order->customer_name}</strong>, tu pedido fue recibido correctamente.</p>
@@ -97,7 +162,7 @@ class SmtpEmailService
                     <td style='padding:5px 0;color:#555;font-size:14px;'>Envío</td>
                     <td style='padding:5px 0;text-align:right;font-size:14px;'>" . ($order->shipping_cost > 0 ? 'Gs. ' . number_format($order->shipping_cost, 0, ',', '.') : 'Gratis') . "</td>
                 </tr>
-                " . ($order->discount > 0 ? "<tr><td style='padding:5px 0;color:#16a34a;font-size:14px;'>Descuento</td><td style='padding:5px 0;text-align:right;font-size:14px;color:#16a34a;'>-Gs. " . number_format($order->discount, 0, ',', '.') . "</td></tr>" : "") . "
+                {$discountRow}
                 <tr style='border-top:2px solid #e5e7eb;'>
                     <td style='padding:10px 0 0;font-weight:700;font-size:16px;color:#1a537a;'>Total</td>
                     <td style='padding:10px 0 0;text-align:right;font-weight:700;font-size:16px;color:#1a537a;'>Gs. " . number_format($order->total, 0, ',', '.') . "</td>
@@ -132,6 +197,21 @@ class SmtpEmailService
             default       => ['#1a537a', '📦', 'Actualización de pedido', 'El estado de tu pedido fue actualizado.'],
         };
 
+        $rendered = $this->renderTemplate('order_status_update', [
+            'store_name'   => $storeName,
+            'order_number' => $order->order_number,
+            'icon'         => $icon,
+            'color'        => $color,
+            'title'        => $title,
+            'body'         => $body,
+            'items_table'  => $this->buildItemsTable($order),
+            'total'        => number_format($order->total, 0, ',', '.'),
+        ]);
+
+        if ($rendered) {
+            return $this->sendHtmlSilent($order->customer_email, $rendered['subject'], $this->wrapEmail($storeName, $rendered['body']));
+        }
+
         $html = $this->wrapEmail($storeName, "
             <div style='text-align:center;padding:10px 0 24px;'>
                 <span style='font-size:40px;'>{$icon}</span>
@@ -165,6 +245,16 @@ class SmtpEmailService
         $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
         $until     = $lockedUntil->format('H:i \d\e\l d/m/Y');
 
+        $rendered = $this->renderTemplate('account_locked', [
+            'store_name'   => $storeName,
+            'name'         => $name,
+            'locked_until' => $until,
+        ]);
+
+        if ($rendered) {
+            return $this->sendHtmlSilent($email, $rendered['subject'], $this->wrapEmail($storeName, $rendered['body']));
+        }
+
         $html = $this->wrapEmail($storeName, "
             <div style='text-align:center;padding:10px 0 24px;'>
                 <span style='font-size:40px;'>🔒</span>
@@ -188,6 +278,18 @@ class SmtpEmailService
         $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
         $when      = now()->format('d/m/Y H:i');
         $browser   = $this->parseUserAgent($userAgent);
+
+        $rendered = $this->renderTemplate('new_login_alert', [
+            'store_name' => $storeName,
+            'name'       => $name,
+            'when'       => $when,
+            'ip'         => $ip,
+            'browser'    => $browser,
+        ]);
+
+        if ($rendered) {
+            return $this->sendHtmlSilent($email, $rendered['subject'], $this->wrapEmail($storeName, $rendered['body']));
+        }
 
         $html = $this->wrapEmail($storeName, "
             <div style='text-align:center;padding:10px 0 24px;'>
@@ -233,6 +335,16 @@ class SmtpEmailService
     public function send2FACode(string $email, string $name, string $code): bool
     {
         $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
+
+        $rendered = $this->renderTemplate('two_factor_code', [
+            'store_name' => $storeName,
+            'name'       => $name,
+            'code'       => $code,
+        ]);
+
+        if ($rendered) {
+            return $this->sendHtmlSilent($email, $rendered['subject'], $this->wrapEmail($storeName, $rendered['body']));
+        }
 
         $html = $this->wrapEmail($storeName, "
             <div style='text-align:center;padding:10px 0 24px;'>

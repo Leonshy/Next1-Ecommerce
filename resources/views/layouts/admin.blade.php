@@ -233,7 +233,7 @@
             </a>
 
             {{-- Configuración --}}
-            @php $configOpen = request()->routeIs('admin.settings.*'); @endphp
+            @php $configOpen = request()->routeIs('admin.settings.*', 'admin.settings.email-templates.*'); @endphp
             <div x-data="{ open: {{ $configOpen ? 'true' : 'false' }} }">
                 <button @click="open = !open"
                         class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors {{ $configOpen ? 'text-[#1a4a6b] font-semibold' : 'text-gray-600' }}">
@@ -254,8 +254,9 @@
                         ['route' => 'admin.settings.payments',  'match' => 'admin.settings.payments',  'label' => 'Pagos'],
                         ['route' => 'admin.settings.seo',       'match' => 'admin.settings.seo*',      'label' => 'SEO'],
                         ['route' => 'admin.settings.analytics', 'match' => 'admin.settings.analytics', 'label' => 'Analytics'],
-                        ['route' => 'admin.settings.email',     'match' => 'admin.settings.email',     'label' => 'Email SMTP'],
-                        ['route' => 'admin.settings.hcaptcha',    'match' => 'admin.settings.hcaptcha',     'label' => 'hCaptcha'],
+                        ['route' => 'admin.settings.email',                 'match' => 'admin.settings.email',                 'label' => 'Email SMTP'],
+                        ['route' => 'admin.settings.email-templates.index', 'match' => 'admin.settings.email-templates.*',     'label' => 'Plantillas de Email'],
+                        ['route' => 'admin.settings.hcaptcha',              'match' => 'admin.settings.hcaptcha',              'label' => 'hCaptcha'],
                         ['route' => 'admin.settings.maintenance', 'match' => 'admin.settings.maintenance*', 'label' => 'Mantenimiento'],
                     ] as $item)
                         <a href="{{ route($item['route']) }}"

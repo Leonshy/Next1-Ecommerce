@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AdminCampaignController;
 use App\Http\Controllers\Admin\AdminPromoBannerController;
 use App\Http\Controllers\Admin\AdminNewsletterController;
 use App\Http\Controllers\Admin\AdminGiftCardController;
+use App\Http\Controllers\Admin\AdminEmailTemplateController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminBrandController;
 use App\Http\Controllers\Admin\AdminTagController;
@@ -197,6 +198,12 @@ Route::middleware(['auth', 'role:admin,vendedor', 'admin.timeout', 'admin.audit'
         Route::get('email', [AdminSettingsController::class, 'email'])->name('email');
         Route::post('email', [AdminSettingsController::class, 'updateEmail'])->name('email.update');
         Route::post('email/test', [AdminSettingsController::class, 'sendTestEmail'])->name('email.test');
+
+        Route::get('email/plantillas',                    [AdminEmailTemplateController::class, 'index'])->name('email-templates.index');
+        Route::get('email/plantillas/{key}/editar',       [AdminEmailTemplateController::class, 'edit'])->name('email-templates.edit');
+        Route::put('email/plantillas/{key}',              [AdminEmailTemplateController::class, 'update'])->name('email-templates.update');
+        Route::get('email/plantillas/{key}/preview',      [AdminEmailTemplateController::class, 'preview'])->name('email-templates.preview');
+        Route::post('email/plantillas/{key}/reset',       [AdminEmailTemplateController::class, 'reset'])->name('email-templates.reset');
 
         Route::get('hcaptcha', [AdminSettingsController::class, 'hcaptcha'])->name('hcaptcha');
         Route::match(['POST', 'PUT'], 'hcaptcha', [AdminSettingsController::class, 'updateHcaptcha'])->name('hcaptcha.update');
