@@ -1,5 +1,8 @@
 <x-guest-layout>
-<div class="w-full max-w-md" x-data="{ showPassword: false, resetOpen: false, resetEmail: '' }">
+@php $hcaptcha = \App\Models\HcaptchaSetting::first(); $captchaActive = $hcaptcha?->is_enabled && $hcaptcha->protect_login && $hcaptcha->site_key; @endphp
+<div class="w-full max-w-md" x-data="{ showPassword: false, resetOpen: false, resetEmail: '', captchaDone: {{ $captchaActive ? 'false' : 'true' }} }"
+     @captcha-verified.document="captchaDone = true"
+     @captcha-expired.document="captchaDone = false">
 
     {{-- Card --}}
     <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -42,7 +45,6 @@
                     {{ session('status') }}
                 </div>
             @endif
-
             <form method="POST" action="{{ route('login') }}"
                   class="space-y-4 @error('email') ring-2 ring-red-400 rounded-xl p-4 -mx-4 @enderror">
                 @csrf
@@ -104,6 +106,16 @@
                     </button>
                 </div>
 
+                {{-- hCaptcha --}}
+                @if($captchaActive)
+                    <div class="flex justify-center">
+                        <div class="h-captcha"
+                             data-sitekey="{{ $hcaptcha->site_key }}"
+                             data-callback="onHcaptchaVerified"
+                             data-expired-callback="onHcaptchaExpired"></div>
+                    </div>
+                @endif
+
                 {{-- Submit --}}
                 <button type="submit"
                         class="w-full bg-primary text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-primary-light transition-colors mt-2">
@@ -129,7 +141,9 @@
             </div>
 
             <a href="{{ route('auth.google') }}"
-               class="mt-4 flex items-center justify-center gap-3 w-full border border-gray-200 rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+               :class="!captchaDone ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'"
+               class="mt-4 flex items-center justify-center gap-3 w-full border border-gray-200 rounded-lg py-2.5 text-sm font-medium text-gray-700 transition-colors"
+               :title="!captchaDone ? 'Completá el captcha primero' : ''">
                 <svg class="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -209,4 +223,11 @@
     </div>
 
 </div>
+@if($captchaActive)
+    <script>
+        function onHcaptchaVerified() { document.dispatchEvent(new CustomEvent('captcha-verified')); }
+        function onHcaptchaExpired()  { document.dispatchEvent(new CustomEvent('captcha-expired')); }
+    </script>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+@endif
 </x-guest-layout>

@@ -4,25 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, HasUuids;
 
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['name', 'email', 'password', 'google_id', 'email_verified_at'];
+    protected $fillable = ['name', 'email', 'password', 'google_id', 'email_verified_at', 'two_factor_enabled', 'locked_until', 'last_login_ip', 'last_login_at'];
 
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'  => 'datetime',
+            'password'           => 'hashed',
+            'two_factor_enabled' => 'boolean',
+            'locked_until'       => 'datetime',
+            'last_login_at'      => 'datetime',
         ];
     }
 
@@ -54,6 +58,11 @@ class User extends Authenticatable
     public function wishlist()
     {
         return $this->hasMany(Wishlist::class, 'user_id');
+    }
+
+    public function isLocked(): bool
+    {
+        return $this->locked_until && $this->locked_until->isFuture();
     }
 
     public function hasRole(string $role): bool

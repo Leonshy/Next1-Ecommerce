@@ -32,6 +32,14 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Verificar hCaptcha si está activo para registro
+        $hcaptcha = \App\Models\HcaptchaSetting::first();
+        if ($hcaptcha?->is_enabled && $hcaptcha->protect_register) {
+            if (!\App\Models\HcaptchaSetting::verifyToken($request->input('h-captcha-response'))) {
+                return back()->withErrors(['email' => 'La verificación de seguridad falló. Intentá de nuevo.'])->withInput();
+            }
+        }
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],

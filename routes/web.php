@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\AdminGiftCardController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminBrandController;
 use App\Http\Controllers\Admin\AdminTagController;
+use App\Http\Controllers\Admin\AdminAuditLogController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NewsletterController;
@@ -51,7 +52,7 @@ Route::middleware('maintenance')->group(function () {
     Route::get('/checkout/confirmacion/{orderId}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
 
     // Mi Cuenta (también bloqueada en mantenimiento para usuarios no admin)
-    Route::middleware('auth')->prefix('mi-cuenta')->name('account.')->group(function () {
+    Route::middleware(['auth', 'verified'])->prefix('mi-cuenta')->name('account.')->group(function () {
         Route::get('/', [AccountController::class, 'index'])->name('index');
         Route::get('/pedidos', [AccountController::class, 'orders'])->name('orders');
         Route::get('/pedidos/{orderNumber}', [AccountController::class, 'orderShow'])->name('order.show');
@@ -64,7 +65,7 @@ Route::middleware('maintenance')->group(function () {
         Route::get('/configuracion', [ProfileController::class, 'edit'])->name('profile.edit');
     });
 
-    Route::middleware('auth')->prefix('mi-cuenta')->group(function () {
+    Route::middleware(['auth', 'verified'])->prefix('mi-cuenta')->group(function () {
         Route::patch('/configuracion', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/configuracion', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });
@@ -82,7 +83,7 @@ Route::post('/webhooks/bancard', [CheckoutController::class, 'bancardWebhook'])
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:admin,vendedor'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:admin,vendedor', 'admin.timeout', 'admin.audit'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('index');
     Route::get('/home', [AdminController::class, 'home'])->name('home');
 
@@ -192,7 +193,9 @@ Route::middleware(['auth', 'role:admin,vendedor'])->prefix('admin')->name('admin
         Route::post('email/test', [AdminSettingsController::class, 'sendTestEmail'])->name('email.test');
 
         Route::get('hcaptcha', [AdminSettingsController::class, 'hcaptcha'])->name('hcaptcha');
-        Route::post('hcaptcha', [AdminSettingsController::class, 'updateHcaptcha'])->name('hcaptcha.update');
+        Route::match(['POST', 'PUT'], 'hcaptcha', [AdminSettingsController::class, 'updateHcaptcha'])->name('hcaptcha.update');
+
+        Route::get('auditoria', [AdminAuditLogController::class, 'index'])->name('audit.index');
 
         Route::get('mantenimiento',  [AdminSettingsController::class, 'maintenance'])->name('maintenance');
         Route::post('mantenimiento', [AdminSettingsController::class, 'updateMaintenance'])->name('maintenance.update');

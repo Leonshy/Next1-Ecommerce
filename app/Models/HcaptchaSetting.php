@@ -26,4 +26,20 @@ class HcaptchaSetting extends Model
         'protect_register'   => 'boolean',
         'protect_newsletter' => 'boolean',
     ];
+
+    public static function verifyToken(?string $token): bool
+    {
+        $settings = static::first();
+        if (!$settings || !$settings->is_enabled || !$settings->secret_key) {
+            return true; // hCaptcha no configurado → dejar pasar
+        }
+        if (!$token) return false;
+
+        $response = \Illuminate\Support\Facades\Http::asForm()->post(
+            'https://hcaptcha.com/siteverify',
+            ['secret' => $settings->secret_key, 'response' => $token]
+        );
+
+        return (bool) ($response->json('success') ?? false);
+    }
 }
