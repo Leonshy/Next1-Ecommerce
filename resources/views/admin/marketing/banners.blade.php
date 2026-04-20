@@ -126,10 +126,20 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             @forelse($banners as $banner)
-                @php $bg = $banner->background_gradient ?? 'linear-gradient(135deg,#1a4a6b,#0f2035)'; @endphp
+                @php
+                    $bg = $banner->background_gradient ?? 'linear-gradient(135deg,#1a4a6b,#0f2035)';
+                    $hasImg = !empty($banner->image_url);
+                    $overlayRgb = $hasImg ? \App\Helpers\ColorHelper::hexToRgb($banner->overlay_color ?? '#000000') : null;
+                    $overlayOpacity = $banner->overlay_opacity ?? 0.40;
+                @endphp
                 <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                    <div class="relative h-24 overflow-hidden" style="background:{{ $bg }}">
-                        <div class="absolute inset-0 p-4 flex flex-col justify-center"
+                    <div class="relative h-24 overflow-hidden"
+                         style="{{ $hasImg ? 'background-image:url(\'' . $banner->image_url . '\');background-size:cover;background-position:center' : 'background:' . $bg }}">
+                        @if($hasImg)
+                            <div class="absolute inset-0"
+                                 style="background-color:{{ $overlayRgb ? 'rgba('.$overlayRgb.','.($overlayOpacity).')' : 'rgba(0,0,0,0.4)' }}"></div>
+                        @endif
+                        <div class="absolute inset-0 p-4 flex flex-col justify-center z-10"
                              style="color:{{ $banner->text_color ?? 'white' }}">
                             <p class="font-bold text-sm uppercase leading-tight">{{ $banner->title }}</p>
                             @if($banner->subtitle)
@@ -300,10 +310,15 @@ function openEditBanner(id, data) {
     ['title','subtitle','description','button_text','button_link','watermark_text','display_order','is_active']
         .forEach(k => set(k, data[k]));
 
-    // Campos de color: notificar a cada color-picker vía evento de ventana
-    window.dispatchEvent(new CustomEvent('banner-set-bg',         { detail: { value: data.background_gradient ?? '#1a4a6b' } }));
-    window.dispatchEvent(new CustomEvent('banner-set-text-color', { detail: { value: data.text_color         ?? 'white'   } }));
-    window.dispatchEvent(new CustomEvent('banner-set-btn-color',  { detail: { value: data.button_text_color  ?? 'white'   } }));
+    // Campos de color
+    window.dispatchEvent(new CustomEvent('banner-set-bg',          { detail: { value: data.background_gradient ?? '#1a4a6b' } }));
+    window.dispatchEvent(new CustomEvent('banner-set-text-color',  { detail: { value: data.text_color          ?? 'white'  } }));
+    window.dispatchEvent(new CustomEvent('banner-set-btn-color',   { detail: { value: data.button_text_color   ?? 'white'  } }));
+    window.dispatchEvent(new CustomEvent('banner-set-overlay-color',{ detail: { value: data.overlay_color      ?? '#000000'} }));
+
+    // Imagen y overlay
+    window.dispatchEvent(new CustomEvent('banner-set-image',   { detail: { url:     data.image_url      ?? '' } }));
+    window.dispatchEvent(new CustomEvent('banner-set-overlay', { detail: { opacity: data.overlay_opacity ?? 0.40 } }));
 
     document.getElementById('modal-banner-edit').classList.remove('hidden');
 }

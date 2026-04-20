@@ -25,6 +25,19 @@ class RegisteredUserController extends Controller
         return view('auth.register');
     }
 
+    public function checkEmail(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $email = strtolower(trim($request->input('email', '')));
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['valid' => false, 'taken' => false]);
+        }
+
+        $taken = User::whereRaw('LOWER(email) = ?', [$email])->exists();
+
+        return response()->json(['valid' => true, 'taken' => $taken]);
+    }
+
     /**
      * Handle an incoming registration request.
      *

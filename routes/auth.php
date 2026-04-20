@@ -28,6 +28,10 @@ Route::middleware('guest')->group(function () {
 
     Route::post('register', [RegisteredUserController::class, 'store']);
 
+    Route::post('register/check-email', [RegisteredUserController::class, 'checkEmail'])
+        ->name('register.check-email')
+        ->middleware('throttle:30,1');
+
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 

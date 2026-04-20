@@ -64,6 +64,9 @@ class AdminPromoBannerController extends Controller
             'subtitle'            => 'nullable|string|max:150',
             'description'         => 'nullable|string|max:500',
             'background_gradient' => 'nullable|string|max:300',
+            'image_url'           => 'nullable|string|max:500',
+            'overlay_color'       => 'nullable|string|max:20',
+            'overlay_opacity'     => 'nullable|numeric|min:0|max:1',
             'text_color'          => 'nullable|string|max:50',
             'button_text'         => 'nullable|string|max:50',
             'button_link'         => 'nullable|string|max:300',
@@ -72,9 +75,11 @@ class AdminPromoBannerController extends Controller
             'display_order'       => 'nullable|integer|min:0',
         ]);
 
-        $data['is_active']     = $request->boolean('is_active');
-        $data['display_order'] = $data['display_order'] ?? 0;
-        $data['text_color']    = $data['text_color'] ?: 'white';
+        $data['is_active']       = $request->boolean('is_active');
+        $data['display_order']   = $data['display_order'] ?? 0;
+        $data['text_color']      = $data['text_color'] ?: 'white';
+        $data['overlay_color']   = $data['overlay_color'] ?: '#000000';
+        $data['overlay_opacity'] = $data['overlay_opacity'] ?? 0.40;
 
         PromoBanner::create($data);
         return back()->with('success', 'Banner creado correctamente.');
@@ -89,6 +94,9 @@ class AdminPromoBannerController extends Controller
             'subtitle'            => 'nullable|string|max:150',
             'description'         => 'nullable|string|max:500',
             'background_gradient' => 'nullable|string|max:300',
+            'image_url'           => 'nullable|string|max:500',
+            'overlay_color'       => 'nullable|string|max:20',
+            'overlay_opacity'     => 'nullable|numeric|min:0|max:1',
             'text_color'          => 'nullable|string|max:50',
             'button_text'         => 'nullable|string|max:50',
             'button_link'         => 'nullable|string|max:300',
@@ -97,9 +105,11 @@ class AdminPromoBannerController extends Controller
             'display_order'       => 'nullable|integer|min:0',
         ]);
 
-        $data['is_active']     = $request->boolean('is_active');
-        $data['display_order'] = $data['display_order'] ?? 0;
-        $data['text_color']    = $data['text_color'] ?: 'white';
+        $data['is_active']       = $request->boolean('is_active');
+        $data['display_order']   = $data['display_order'] ?? 0;
+        $data['text_color']      = $data['text_color'] ?: 'white';
+        $data['overlay_color']   = $data['overlay_color'] ?: '#000000';
+        $data['overlay_opacity'] = $data['overlay_opacity'] ?? 0.40;
 
         $banner->update($data);
         return back()->with('success', 'Banner actualizado correctamente.');

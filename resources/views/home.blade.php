@@ -368,25 +368,34 @@
                 @if($promoBanners->count())
                     @foreach($promoBanners as $banner)
                         @php
-                            $bg = $banner->background_gradient ?? '';
-                            if (str_starts_with($bg, '{') || str_starts_with($bg, '[')) {
-                                $bgData = json_decode($bg, true) ?? [];
-                                if (isset($bgData['type']) && $bgData['type'] === 'image' && isset($bgData['url'])) {
-                                    $bgStyle = "background-image:url('" . $bgData['url'] . "');background-size:cover;background-position:center";
-                                } elseif (isset($bgData['color'])) {
-                                    $bgStyle = "background-color:" . $bgData['color'];
-                                } elseif (isset($bgData['gradient'])) {
-                                    $bgStyle = "background:" . $bgData['gradient'];
+                            $hasImg  = !empty($banner->image_url);
+                            if ($hasImg) {
+                                $bgStyle = "background-image:url('" . $banner->image_url . "');background-size:cover;background-position:center";
+                            } else {
+                                $bg = $banner->background_gradient ?? '';
+                                if (str_starts_with($bg, '{') || str_starts_with($bg, '[')) {
+                                    $bgData = json_decode($bg, true) ?? [];
+                                    if (isset($bgData['color'])) {
+                                        $bgStyle = "background-color:" . $bgData['color'];
+                                    } elseif (isset($bgData['gradient'])) {
+                                        $bgStyle = "background:" . $bgData['gradient'];
+                                    } else {
+                                        $bgStyle = "background:" . $bg;
+                                    }
                                 } else {
                                     $bgStyle = "background:" . $bg;
                                 }
-                            } else {
-                                $bgStyle = "background:" . $bg;
                             }
+                            $overlayRgb     = \App\Helpers\ColorHelper::hexToRgb($banner->overlay_color ?? '#000000');
+                            $overlayOpacity = $banner->overlay_opacity ?? 0.40;
                         @endphp
                         <a href="{{ $banner->button_link }}"
                            class="promo-banner relative h-32 overflow-hidden group cursor-pointer block rounded-xl shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-soft)] transition-shadow duration-300"
                            style="{{ $bgStyle }}">
+                            @if($hasImg)
+                                <div class="absolute inset-0 transition-opacity duration-300"
+                                     style="background-color:rgba({{ $overlayRgb }},{{ $overlayOpacity }})"></div>
+                            @endif
                             <div class="absolute inset-0 p-4 flex flex-col justify-center z-10"
                                  style="color:{{ $banner->text_color ?? 'white' }}">
                                 <h3 class="font-bold text-lg uppercase leading-tight">{{ $banner->title }}</h3>
@@ -401,9 +410,11 @@
                                     </span>
                                 @endif
                             </div>
-                            <div class="absolute right-0 top-0 h-full w-1/2 opacity-20">
-                                <div class="absolute right-4 top-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/30 rounded-full"></div>
-                            </div>
+                            @if(!$hasImg)
+                                <div class="absolute right-0 top-0 h-full w-1/2 opacity-20">
+                                    <div class="absolute right-4 top-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/30 rounded-full"></div>
+                                </div>
+                            @endif
                         </a>
                     @endforeach
                 @else

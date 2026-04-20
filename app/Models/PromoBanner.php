@@ -16,11 +16,15 @@ class PromoBanner extends Model
 
     protected $fillable = [
         'title', 'subtitle', 'description', 'background_gradient',
+        'image_url', 'overlay_color', 'overlay_opacity',
         'text_color', 'button_text', 'button_link', 'button_text_color',
         'icon_type', 'watermark_text', 'display_order', 'is_active',
     ];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = [
+        'is_active'       => 'boolean',
+        'overlay_opacity' => 'float',
+    ];
 
     public function scopeActive($query)
     {

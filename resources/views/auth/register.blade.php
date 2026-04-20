@@ -1,6 +1,45 @@
 <x-guest-layout>
 @php $hcaptcha = \App\Models\HcaptchaSetting::first(); $captchaActive = $hcaptcha?->is_enabled && $hcaptcha->protect_register && $hcaptcha->site_key; @endphp
-<div class="w-full max-w-md" x-data="{ showPassword: false, showConfirm: false, acceptTerms: false, acceptPromotions: false, termsError: false, captchaDone: {{ $captchaActive ? 'false' : 'true' }} }"
+<div class="w-full max-w-md" x-data="{
+        showPassword: false, showConfirm: false,
+        acceptTerms: false, acceptPromotions: false,
+        termsError: false,
+        captchaDone: {{ $captchaActive ? 'false' : 'true' }},
+        password: '',
+        passwordConfirm: '',
+        passwordTouched: false,
+        get hasMinLength()  { return this.password.length >= 8; },
+        get hasUppercase()  { return /[A-Z]/.test(this.password); },
+        get hasLowercase()  { return /[a-z]/.test(this.password); },
+        get hasNumber()     { return /[0-9]/.test(this.password); },
+        get passwordsMatch(){ return this.passwordConfirm.length > 0 && this.password === this.passwordConfirm; },
+        get confirmTouched(){ return this.passwordConfirm.length > 0; },
+        email: '',
+        emailTouched: false,
+        emailChecking: false,
+        emailTaken: false,
+        emailServerValid: null,
+        _emailTimer: null,
+        get emailFormatValid() { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email); },
+        checkEmailAvailability() {
+            clearTimeout(this._emailTimer);
+            if (!this.emailFormatValid) { this.emailTaken = false; this.emailServerValid = null; return; }
+            this.emailChecking = true;
+            this._emailTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch('{{ route('register.check-email') }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '' },
+                        body: JSON.stringify({ email: this.email })
+                    });
+                    const data = await res.json();
+                    this.emailTaken = data.taken;
+                    this.emailServerValid = data.valid;
+                } catch(e) { this.emailTaken = false; this.emailServerValid = null; }
+                this.emailChecking = false;
+            }, 600);
+        }
+    }"
      @captcha-verified.document="captchaDone = true"
      @captcha-expired.document="captchaDone = false">
 
@@ -75,11 +114,24 @@
                                value="{{ old('email') }}"
                                required autocomplete="username"
                                placeholder="tu@email.com"
-                               class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors @error('email') border-red-400 @enderror">
+                               x-model="email"
+                               @input="emailTouched = true; checkEmailAvailability()"
+                               :class="emailTouched ? ((!emailFormatValid) ? 'border-red-300' : (emailChecking ? 'border-gray-300' : (emailTaken ? 'border-red-300' : (emailServerValid ? 'border-green-400' : 'border-gray-200')))) : ''"
+                               class="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors @error('email') border-red-400 @enderror">
+                        {{-- Icono de estado --}}
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2" x-show="emailTouched" style="display:none">
+                            <svg x-show="emailChecking" class="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                            <svg x-show="!emailChecking && emailFormatValid && emailServerValid && !emailTaken" class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            <svg x-show="!emailChecking && (!emailFormatValid || emailTaken)" class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </span>
                     </div>
                     @error('email')
                         <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                     @enderror
+                    <p x-show="emailTouched && !emailFormatValid" class="mt-1 text-xs text-red-500" style="display:none">Ingresá un email válido.</p>
+                    <p x-show="emailTouched && emailFormatValid && !emailChecking && emailTaken" class="mt-1 text-xs text-red-500" style="display:none">Este email ya está registrado. ¿Ya tenés cuenta?</p>
+                    <p x-show="emailTouched && emailFormatValid && !emailChecking && emailServerValid && !emailTaken" class="mt-1 text-xs text-green-600" style="display:none">Email disponible.</p>
+                    <p x-show="emailTouched && emailFormatValid && emailChecking" class="mt-1 text-xs text-gray-400" style="display:none">Verificando disponibilidad...</p>
                 </div>
 
                 {{-- Password --}}
@@ -95,6 +147,9 @@
                                :type="showPassword ? 'text' : 'password'"
                                required autocomplete="new-password"
                                placeholder="••••••••"
+                               x-model="password"
+                               @input="passwordTouched = true"
+                               :class="passwordTouched && !(hasMinLength && hasUppercase && hasLowercase && hasNumber) ? 'border-red-300' : (passwordTouched ? 'border-green-400' : '')"
                                class="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors @error('password') border-red-400 @enderror">
                         <button type="button" @click="showPassword = !showPassword"
                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -110,7 +165,37 @@
                     @error('password')
                         <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-xs text-gray-400">Mínimo 8 caracteres, mayúscula, minúscula y número.</p>
+                    <div x-show="passwordTouched" class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1" style="display:none">
+                        <span class="flex items-center gap-1 text-xs transition-colors" :class="hasMinLength ? 'text-green-600' : 'text-red-500'">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path x-show="hasMinLength" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                <path x-show="!hasMinLength" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Mín. 8 caracteres
+                        </span>
+                        <span class="flex items-center gap-1 text-xs transition-colors" :class="hasUppercase ? 'text-green-600' : 'text-red-500'">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path x-show="hasUppercase" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                <path x-show="!hasUppercase" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Una mayúscula
+                        </span>
+                        <span class="flex items-center gap-1 text-xs transition-colors" :class="hasLowercase ? 'text-green-600' : 'text-red-500'">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path x-show="hasLowercase" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                <path x-show="!hasLowercase" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Una minúscula
+                        </span>
+                        <span class="flex items-center gap-1 text-xs transition-colors" :class="hasNumber ? 'text-green-600' : 'text-red-500'">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path x-show="hasNumber" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                <path x-show="!hasNumber" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Un número
+                        </span>
+                    </div>
+                    <p x-show="!passwordTouched" class="mt-1 text-xs text-gray-400" style="">Mínimo 8 caracteres, mayúscula, minúscula y número.</p>
                 </div>
 
                 {{-- Confirm Password --}}
@@ -126,6 +211,8 @@
                                :type="showConfirm ? 'text' : 'password'"
                                required autocomplete="new-password"
                                placeholder="••••••••"
+                               x-model="passwordConfirm"
+                               :class="confirmTouched ? (passwordsMatch ? 'border-green-400' : 'border-red-300') : ''"
                                class="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
                         <button type="button" @click="showConfirm = !showConfirm"
                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -138,6 +225,14 @@
                             </svg>
                         </button>
                     </div>
+                    <p x-show="confirmTouched && passwordsMatch" class="mt-1 text-xs text-green-600 flex items-center gap-1" style="display:none">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        Las contraseñas coinciden
+                    </p>
+                    <p x-show="confirmTouched && !passwordsMatch" class="mt-1 text-xs text-red-500 flex items-center gap-1" style="display:none">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                        Las contraseñas no coinciden
+                    </p>
                 </div>
 
                 {{-- Checkboxes --}}

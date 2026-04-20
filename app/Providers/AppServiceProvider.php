@@ -18,6 +18,6 @@ class AppServiceProvider extends ServiceProvider
     {
         ProductImage::observe(ProductImageObserver::class);
 
-        Password::defaults(fn () => Password::min(8)->mixedCase()->numbers()->uncompromised(3));
+        Password::defaults(fn () => Password::min(8)->mixedCase()->numbers());
     }
 }
