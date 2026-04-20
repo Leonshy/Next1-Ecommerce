@@ -11,9 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         $middleware->alias([
-            'role'        => \App\Http\Middleware\RoleMiddleware::class,
-            'maintenance' => \App\Http\Middleware\MaintenanceMiddleware::class,
+            'role'            => \App\Http\Middleware\RoleMiddleware::class,
+            'maintenance'     => \App\Http\Middleware\MaintenanceMiddleware::class,
+            'admin.timeout'   => \App\Http\Middleware\AdminSessionTimeout::class,
+            'admin.audit'     => \App\Http\Middleware\AuditAdminActions::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

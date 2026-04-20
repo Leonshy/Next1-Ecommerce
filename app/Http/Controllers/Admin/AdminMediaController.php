@@ -43,35 +43,129 @@ class AdminMediaController extends Controller
         return view('admin.media.index', compact('files', 'total'));
     }
 
+    // MIME types permitidos: tipo real (finfo) → extensión normalizada
+    private const ALLOWED_MIME_TYPES = [
+        'image/jpeg'    => 'jpg',
+        'image/png'     => 'png',
+        'image/gif'     => 'gif',
+        'image/webp'    => 'webp',
+        'image/svg+xml' => 'svg',
+        'image/x-icon'  => 'ico',
+        'video/mp4'     => 'mp4',
+        'video/webm'    => 'webm',
+        'application/pdf' => 'pdf',
+    ];
+
     public function upload(Request $request)
     {
         $request->validate([
             'files'   => 'required|array|max:20',
-            'files.*' => 'file|max:20480', // 20 MB per file
+            'files.*' => 'file|max:20480',
         ]);
 
         $uploaded = [];
+        $errors   = [];
 
         foreach ($request->file('files') as $file) {
-            $originalName = $file->getClientOriginalName();
-            $extension    = $file->getClientOriginalExtension();
-            $safeName     = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '-' . time() . '.' . $extension;
-            $path         = $file->storeAs('media', $safeName, 'public');
-
-            $media = MediaFile::create([
-                'file_name'   => $originalName,
-                'file_path'   => $path,
-                'file_url'    => Storage::disk('public')->url($path),
-                'mime_type'   => $file->getMimeType(),
-                'file_size'   => $file->getSize(),
-                'alt_text'    => pathinfo($originalName, PATHINFO_FILENAME),
-                'uploaded_by' => auth()->id(),
-            ]);
-
-            $uploaded[] = $this->formatFile($media);
+            try {
+                $media      = $this->processUpload($file);
+                $uploaded[] = $this->formatFile($media);
+            } catch (\RuntimeException $e) {
+                $errors[] = $file->getClientOriginalName() . ': ' . $e->getMessage();
+            }
         }
 
-        return response()->json(['uploaded' => $uploaded], 201);
+        $response = ['uploaded' => $uploaded];
+        if ($errors) $response['errors'] = $errors;
+
+        return response()->json($response, $uploaded ? 201 : 422);
+    }
+
+    private function processUpload(\Illuminate\Http\UploadedFile $file): MediaFile
+    {
+        // 1. Verificar MIME real con finfo (no confiar en extensión del cliente)
+        $realMime = $this->getRealMimeType($file->getRealPath());
+
+        if (! array_key_exists($realMime, self::ALLOWED_MIME_TYPES)) {
+            throw new \RuntimeException("Tipo de archivo no permitido ({$realMime}).");
+        }
+
+        // 2. Para imágenes: verificar que sea imagen válida y limpiar EXIF
+        $isImage = str_starts_with($realMime, 'image/') && $realMime !== 'image/svg+xml';
+        $tmpPath = $file->getRealPath();
+
+        if ($isImage) {
+            if (! @getimagesize($tmpPath)) {
+                throw new \RuntimeException('El archivo no es una imagen válida.');
+            }
+            $tmpPath = $this->stripExifAndReencode($tmpPath, $realMime);
+        }
+
+        // 3. Construir nombre seguro usando extensión del MIME real (no la del cliente)
+        $safeExt  = self::ALLOWED_MIME_TYPES[$realMime];
+        $baseName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
+        $safeName = ($baseName ?: 'file') . '-' . time() . '-' . Str::random(6) . '.' . $safeExt;
+
+        // 4. Guardar en disco
+        $destination = storage_path('app/public/media/' . $safeName);
+        copy($tmpPath, $destination);
+
+        // Limpiar archivo temporal de re-encode si fue creado
+        if ($tmpPath !== $file->getRealPath() && file_exists($tmpPath)) {
+            @unlink($tmpPath);
+        }
+
+        return MediaFile::create([
+            'file_name'   => $file->getClientOriginalName(),
+            'file_path'   => 'media/' . $safeName,
+            'file_url'    => Storage::disk('public')->url('media/' . $safeName),
+            'mime_type'   => $realMime,
+            'file_size'   => filesize($destination),
+            'alt_text'    => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+            'uploaded_by' => auth()->id(),
+        ]);
+    }
+
+    private function getRealMimeType(string $path): string
+    {
+        if (function_exists('finfo_file')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime  = finfo_file($finfo, $path);
+            finfo_close($finfo);
+            return $mime ?: 'application/octet-stream';
+        }
+        return mime_content_type($path) ?: 'application/octet-stream';
+    }
+
+    private function stripExifAndReencode(string $path, string $mime): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'upload_');
+
+        try {
+            $img = match ($mime) {
+                'image/jpeg' => @imagecreatefromjpeg($path),
+                'image/png'  => @imagecreatefrompng($path),
+                'image/gif'  => @imagecreatefromgif($path),
+                'image/webp' => @imagecreatefromwebp($path),
+                default      => null,
+            };
+
+            if (! $img) return $path; // no se pudo re-encodear, usar original
+
+            match ($mime) {
+                'image/jpeg' => imagejpeg($img, $tmp, 92),
+                'image/png'  => imagepng($img, $tmp, 6),
+                'image/gif'  => imagegif($img, $tmp),
+                'image/webp' => imagewebp($img, $tmp, 90),
+                default      => null,
+            };
+
+            imagedestroy($img);
+
+            return $tmp;
+        } catch (\Throwable) {
+            return $path;
+        }
     }
 
     public function updateAlt(Request $request, MediaFile $media)

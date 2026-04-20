@@ -102,7 +102,7 @@ class AdminSettingsController extends Controller
     // ── SEO ───────────────────────────────────────────────────────────────────
     public function seo()
     {
-        $pages    = ['home', 'products', 'about_us', 'faq', 'global'];
+        $pages = ['home', 'products', 'about_us', 'faq', 'terms', 'privacy_policy', 'gift_cards', 'global'];
         $settings = [];
         foreach ($pages as $page) {
             $settings[$page] = SeoSetting::firstOrCreate(['page_key' => $page]);
@@ -112,13 +112,19 @@ class AdminSettingsController extends Controller
 
     public function updateSeo(Request $request)
     {
+        $allowed = ['meta_title', 'meta_description', 'keywords', 'canonical_url', 'og_image'];
+
         foreach ($request->input('pages', []) as $pageKey => $data) {
+            $payload = array_intersect_key($data, array_flip($allowed));
+            // Convertir strings vacíos a null para limpiar el campo
+            $payload = array_map(fn($v) => $v === '' ? null : $v, $payload);
+
             SeoSetting::updateOrCreate(
                 ['page_key' => $pageKey],
-                array_filter($data, fn($v) => $v !== null)
+                $payload
             );
         }
-        return back()->with('success', 'SEO actualizado.');
+        return back()->with('success', 'SEO actualizado correctamente.');
     }
 
     // ── Analytics ─────────────────────────────────────────────────────────────

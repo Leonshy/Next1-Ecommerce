@@ -21,10 +21,12 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'subtotal'     => 'decimal:2',
-        'discount'     => 'decimal:2',
-        'shipping_cost' => 'decimal:2',
-        'total'        => 'decimal:2',
+        'subtotal'         => 'decimal:2',
+        'discount'         => 'decimal:2',
+        'shipping_cost'    => 'decimal:2',
+        'total'            => 'decimal:2',
+        'customer_phone'   => 'encrypted',
+        'shipping_address' => 'encrypted',
     ];
 
     protected static function boot()

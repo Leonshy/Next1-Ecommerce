@@ -18,7 +18,11 @@ class UserAddress extends Model
         'cross_street_1', 'house_number', 'reference', 'is_default',
     ];
 
-    protected $casts = ['is_default' => 'boolean'];
+    protected $casts = [
+        'is_default'     => 'boolean',
+        'phone'          => 'encrypted',
+        'street_address' => 'encrypted',
+    ];
 
     protected static function boot()
     {

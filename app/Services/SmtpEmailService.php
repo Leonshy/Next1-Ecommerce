@@ -158,6 +158,104 @@ class SmtpEmailService
         );
     }
 
+    // ── Seguridad ─────────────────────────────────────────────────────────────
+
+    public function sendAccountLocked(string $email, string $name, \Carbon\Carbon $lockedUntil): bool
+    {
+        $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
+        $until     = $lockedUntil->format('H:i \d\e\l d/m/Y');
+
+        $html = $this->wrapEmail($storeName, "
+            <div style='text-align:center;padding:10px 0 24px;'>
+                <span style='font-size:40px;'>🔒</span>
+                <h2 style='margin:12px 0 6px;font-size:22px;color:#b91c1c;'>Cuenta bloqueada temporalmente</h2>
+                <p style='margin:0;color:#555;font-size:15px;'>Hola <strong>{$name}</strong>, detectamos múltiples intentos de acceso fallidos en tu cuenta.</p>
+            </div>
+
+            <div style='background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:14px;color:#991b1b;'>
+                Tu cuenta ha sido bloqueada hasta las <strong>{$until}</strong> por seguridad.
+            </div>
+
+            <p style='font-size:14px;color:#444;'>Si fuiste vos quien intentó ingresar y olvidaste tu contraseña, podés restablecerla desde la pantalla de inicio de sesión.</p>
+            <p style='font-size:13px;color:#888;margin-top:16px;'>Si no reconocés esta actividad, te recomendamos cambiar tu contraseña en cuanto recuperes el acceso.</p>
+        ");
+
+        return $this->sendHtmlSilent($email, "Cuenta bloqueada — {$storeName}", $html);
+    }
+
+    public function sendNewLoginAlert(string $email, string $name, string $ip, string $userAgent): bool
+    {
+        $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
+        $when      = now()->format('d/m/Y H:i');
+        $browser   = $this->parseUserAgent($userAgent);
+
+        $html = $this->wrapEmail($storeName, "
+            <div style='text-align:center;padding:10px 0 24px;'>
+                <span style='font-size:40px;'>🛡️</span>
+                <h2 style='margin:12px 0 6px;font-size:22px;color:#1a537a;'>Nuevo acceso a tu cuenta</h2>
+                <p style='margin:0;color:#555;font-size:15px;'>Hola <strong>{$name}</strong>, se detectó un inicio de sesión desde una ubicación nueva.</p>
+            </div>
+
+            <table width='100%' cellpadding='0' cellspacing='0' style='background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:20px;'>
+                <tr><td style='padding:5px 0;font-size:13px;color:#555;'><strong>Fecha y hora:</strong></td><td style='padding:5px 0;font-size:13px;color:#333;text-align:right;'>{$when}</td></tr>
+                <tr><td style='padding:5px 0;font-size:13px;color:#555;'><strong>Dirección IP:</strong></td><td style='padding:5px 0;font-size:13px;color:#333;text-align:right;'>{$ip}</td></tr>
+                <tr><td style='padding:5px 0;font-size:13px;color:#555;'><strong>Dispositivo:</strong></td><td style='padding:5px 0;font-size:13px;color:#333;text-align:right;'>{$browser}</td></tr>
+            </table>
+
+            <div style='background:#fff8e7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;'>
+                Si no fuiste vos, cambiá tu contraseña de inmediato y activá la verificación en dos pasos.
+            </div>
+        ");
+
+        return $this->sendHtmlSilent($email, "Nuevo acceso detectado — {$storeName}", $html);
+    }
+
+    private function parseUserAgent(string $ua): string
+    {
+        $browser = 'Navegador desconocido';
+        if (str_contains($ua, 'Chrome'))  $browser = 'Chrome';
+        elseif (str_contains($ua, 'Firefox')) $browser = 'Firefox';
+        elseif (str_contains($ua, 'Safari'))  $browser = 'Safari';
+        elseif (str_contains($ua, 'Edge'))    $browser = 'Edge';
+
+        $os = 'SO desconocido';
+        if (str_contains($ua, 'Windows'))    $os = 'Windows';
+        elseif (str_contains($ua, 'Mac'))    $os = 'macOS';
+        elseif (str_contains($ua, 'Linux'))  $os = 'Linux';
+        elseif (str_contains($ua, 'Android')) $os = 'Android';
+        elseif (str_contains($ua, 'iPhone') || str_contains($ua, 'iPad')) $os = 'iOS';
+
+        return "{$browser} en {$os}";
+    }
+
+    // ── 2FA ───────────────────────────────────────────────────────────────────
+
+    public function send2FACode(string $email, string $name, string $code): bool
+    {
+        $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
+
+        $html = $this->wrapEmail($storeName, "
+            <div style='text-align:center;padding:10px 0 24px;'>
+                <span style='font-size:40px;'>🔐</span>
+                <h2 style='margin:12px 0 6px;font-size:22px;color:#1a537a;'>Tu código de verificación</h2>
+                <p style='margin:0;color:#555;font-size:15px;'>Hola <strong>{$name}</strong>, usá este código para completar tu acceso:</p>
+            </div>
+
+            <div style='text-align:center;margin:28px 0;'>
+                <div style='display:inline-block;background:#f0f7ff;border:2px dashed #1a537a;border-radius:12px;padding:20px 40px;'>
+                    <span style='font-size:40px;font-weight:900;letter-spacing:10px;color:#1a537a;font-family:monospace;'>{$code}</span>
+                </div>
+            </div>
+
+            <div style='background:#fff8e7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;'>
+                ⏱ Este código es válido por <strong>10 minutos</strong>.<br>
+                Si no intentaste iniciar sesión, ignorá este mensaje y tu cuenta sigue segura.
+            </div>
+        ");
+
+        return $this->sendHtmlSilent($email, "Código de verificación — {$storeName}", $html);
+    }
+
     // ── Genérico ──────────────────────────────────────────────────────────────
 
     public function sendHtml(string $to, string $subject, string $html): bool
