@@ -65,7 +65,7 @@
                                 2FA ✓
                             </span>
                         @else
-                            <a href="{{ route('account.profile.edit') }}"
+                            <a href="{{ route('admin.profile') }}"
                                class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors" title="Activar verificación en dos pasos">
                                 2FA off
                             </a>
@@ -274,7 +274,7 @@
 
         {{-- Footer --}}
         <div class="border-t border-gray-100 p-3 space-y-0.5">
-            <a href="{{ route('account.profile.edit') }}"
+            <a href="{{ route('admin.profile') }}"
                class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-gray-600">
                 <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

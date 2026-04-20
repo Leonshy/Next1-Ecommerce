@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminBrandController;
 use App\Http\Controllers\Admin\AdminTagController;
 use App\Http\Controllers\Admin\AdminAuditLogController;
+use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NewsletterController;
@@ -86,6 +87,11 @@ Route::post('/webhooks/bancard', [CheckoutController::class, 'bancardWebhook'])
 Route::middleware(['auth', 'role:admin,vendedor', 'admin.timeout', 'admin.audit'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('index');
     Route::get('/home', [AdminController::class, 'home'])->name('home');
+
+    // Perfil y seguridad del admin
+    Route::get('mi-perfil', [AdminProfileController::class, 'edit'])->name('profile');
+    Route::patch('mi-perfil', [AdminProfileController::class, 'update'])->name('profile.update');
+    Route::post('mi-perfil/password', [AdminProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Usuarios (solo admin)
     Route::middleware('role:admin')->group(function () {
