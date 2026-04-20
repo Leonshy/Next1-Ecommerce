@@ -9,8 +9,14 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+
+// 2FA challenge (accesible sin auth completa, solo con clave de sesión)
+Route::get('verificacion-2fa', [TwoFactorController::class, 'show'])->name('2fa.challenge');
+Route::post('verificacion-2fa', [TwoFactorController::class, 'verify'])->name('2fa.verify')->middleware('throttle:10,1');
+Route::post('verificacion-2fa/reenviar', [TwoFactorController::class, 'resend'])->name('2fa.resend')->middleware('throttle:6,1');
 
 // Google OAuth (sin middleware guest para que el callback funcione siempre)
 Route::get('auth/google', [SocialAuthController::class, 'redirectToGoogle'])->name('auth.google');
@@ -61,4 +67,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
+
+    // 2FA configuración desde perfil
+    Route::post('2fa/habilitar', [TwoFactorController::class, 'enable'])->name('2fa.enable');
+    Route::post('2fa/deshabilitar', [TwoFactorController::class, 'disable'])->name('2fa.disable');
 });
