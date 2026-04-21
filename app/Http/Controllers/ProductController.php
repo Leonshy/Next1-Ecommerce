@@ -79,7 +79,7 @@ class ProductController extends Controller
                 ? mb_substr(strip_tags($product->description), 0, 155) . '…'
                 : $product->name,
             'og_image'    => $product->mainImage?->image_url ?? '',
-            'canonical'   => route('productos.show', $product->slug),
+            'canonical'   => route('products.show', $product->slug),
             'og_type'     => 'product',
         ];
 
