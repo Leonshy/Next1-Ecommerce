@@ -154,7 +154,15 @@ class CheckoutForm extends Component
             foreach ($cart as $item) {
                 $product = \App\Models\Product::find($item['id'] ?? $item['product_id'] ?? null);
                 if (!$product) continue;
-                $qty   = (int) $item['quantity'];
+                $qty = (int) $item['quantity'];
+
+                if ($product->stock !== null && $product->stock < $qty) {
+                    $available = $product->stock;
+                    $this->addError('general', "Stock insuficiente para \"{$product->name}\". Disponible: {$available}.");
+                    DB::rollBack();
+                    return;
+                }
+
                 $price = (float) $product->price;
                 $orderItems[] = [
                     'product_id'    => $product->id,
@@ -206,6 +214,12 @@ class CheckoutForm extends Component
 
             foreach ($orderItems as $item) {
                 $order->items()->create($item);
+
+                if ($item['product_id']) {
+                    \App\Models\Product::where('id', $item['product_id'])
+                        ->whereNotNull('stock')
+                        ->decrement('stock', $item['quantity']);
+                }
             }
 
             DB::commit();
