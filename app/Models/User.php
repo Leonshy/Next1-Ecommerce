@@ -2,11 +2,17 @@
 
 namespace App\Models;
 
+use App\Services\SmtpEmailService;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\URL;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -58,6 +64,37 @@ class User extends Authenticatable implements MustVerifyEmail
     public function wishlist()
     {
         return $this->hasMany(Wishlist::class, 'user_id');
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            Carbon::now()->addMinutes(Config::get('auth.verification.expire', 60)),
+            ['id' => $this->getKey(), 'hash' => sha1($this->getEmailForVerification())]
+        );
+
+        try {
+            app(SmtpEmailService::class)->sendEmailVerification(
+                $this->email,
+                $this->name,
+                $verificationUrl
+            );
+        } catch (\Throwable) {
+            // Si SmtpEmailService falla, cae al sistema nativo de Laravel
+            $this->notify(new VerifyEmail);
+        }
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $resetUrl = url(route('password.reset', ['token' => $token, 'email' => $this->email], false));
+
+        try {
+            app(SmtpEmailService::class)->sendPasswordReset($this->email, $this->name, $resetUrl);
+        } catch (\Throwable) {
+            $this->notify(new ResetPassword($token));
+        }
     }
 
     public function isLocked(): bool

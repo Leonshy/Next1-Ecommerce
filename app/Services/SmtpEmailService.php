@@ -95,6 +95,106 @@ class SmtpEmailService
         );
     }
 
+    // ── Verificación de cuenta ────────────────────────────────────────────────
+
+    public function sendEmailVerification(string $email, string $name, string $verificationUrl): bool
+    {
+        $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
+
+        $rendered = $this->renderTemplate('email_verification', [
+            'store_name' => $storeName,
+            'name'       => $name,
+            'url'        => $verificationUrl,
+        ]);
+
+        if ($rendered) {
+            return $this->sendHtmlSilent($email, $rendered['subject'], $this->wrapEmail($storeName, $rendered['body']));
+        }
+
+        $html = $this->wrapEmail($storeName, "
+            <div style='text-align:center;padding:10px 0 24px;'>
+                <span style='font-size:40px;'>✉️</span>
+                <h2 style='margin:12px 0 6px;font-size:22px;color:#1a537a;'>Verificá tu dirección de correo</h2>
+                <p style='margin:0;color:#555;font-size:15px;'>Hola <strong>{$name}</strong>, hacé clic en el botón para activar tu cuenta.</p>
+            </div>
+
+            <div style='text-align:center;margin:28px 0;'>
+                <a href='{$verificationUrl}'
+                   style='display:inline-block;background:#1a537a;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;'>
+                    Verificar mi correo
+                </a>
+            </div>
+
+            <p style='font-size:12px;color:#999;text-align:center;margin:0 0 8px;'>
+                O copiá este enlace en tu navegador:
+            </p>
+            <p style='font-size:11px;color:#aaa;text-align:center;word-break:break-all;margin:0 0 24px;'>
+                {$verificationUrl}
+            </p>
+
+            <div style='background:#fff8e7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;'>
+                ⏱ Este enlace expira en 60 minutos.<br>
+                Si no creaste una cuenta, podés ignorar este email.
+            </div>
+        ");
+
+        return $this->sendHtmlSilent(
+            $email,
+            "Verificá tu correo en {$storeName}",
+            $html
+        );
+    }
+
+    // ── Reset de contraseña ───────────────────────────────────────────────────
+
+    public function sendPasswordReset(string $email, string $name, string $resetUrl): bool
+    {
+        $storeName = SiteContent::getByKey('store_info')?->metadata['storeName'] ?? config('app.name', 'Next1');
+
+        $rendered = $this->renderTemplate('password_reset', [
+            'store_name' => $storeName,
+            'name'       => $name,
+            'url'        => $resetUrl,
+        ]);
+
+        if ($rendered) {
+            return $this->sendHtmlSilent($email, $rendered['subject'], $this->wrapEmail($storeName, $rendered['body']));
+        }
+
+        $html = $this->wrapEmail($storeName, "
+            <div style='text-align:center;padding:10px 0 24px;'>
+                <span style='font-size:40px;'>🔒</span>
+                <h2 style='margin:12px 0 6px;font-size:22px;color:#1a537a;'>Restablecer contraseña</h2>
+                <p style='margin:0;color:#555;font-size:15px;'>Hola <strong>{$name}</strong>, recibimos una solicitud para restablecer tu contraseña.</p>
+            </div>
+
+            <div style='text-align:center;margin:28px 0;'>
+                <a href='{$resetUrl}'
+                   style='display:inline-block;background:#1a537a;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;'>
+                    Restablecer contraseña
+                </a>
+            </div>
+
+            <p style='font-size:12px;color:#999;text-align:center;margin:0 0 8px;'>
+                O copiá este enlace en tu navegador:
+            </p>
+            <p style='font-size:11px;color:#aaa;text-align:center;word-break:break-all;margin:0 0 24px;'>
+                {$resetUrl}
+            </p>
+
+            <div style='background:#fff8e7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;'>
+                ⏱ Este enlace expira en 60 minutos.<br>
+                Si no solicitaste restablecer tu contraseña, ignorá este email. Tu cuenta sigue segura.
+            </div>
+        ");
+
+        return $this->sendHtmlSilent(
+            $email,
+            "Restablecer contraseña en {$storeName}",
+            $html
+        );
+    }
+
     // ── Transaccionales ───────────────────────────────────────────────────────
 
     public function sendOrderConfirmation(Order $order): bool
