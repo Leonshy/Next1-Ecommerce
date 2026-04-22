@@ -84,28 +84,51 @@
                         @error('recipient_name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
 
-                    <div>
+                    <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
                         <input type="text" name="phone" value="{{ old('phone') }}"
                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         @error('phone')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Departamento *</label>
-                        <input type="text" name="department" value="{{ old('department') }}" placeholder="ej: Central"
-                               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        @error('department')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    @php $pyLocations = \App\Data\ParaguayLocations::departments(); @endphp
+                    <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4"
+                         x-data="{
+                            departments: {{ json_encode($pyLocations) }},
+                            selectedDept: '{{ old('department') }}',
+                            get districts() {
+                                const dept = this.departments.find(d => d.id === this.selectedDept);
+                                return dept ? dept.districts : [];
+                            }
+                         }">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Departamento *</label>
+                            <select name="department" x-model="selectedDept"
+                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option value="">— Seleccioná un departamento —</option>
+                                @foreach($pyLocations as $dept)
+                                    <option value="{{ $dept['id'] }}" {{ old('department') === $dept['id'] ? 'selected' : '' }}>{{ $dept['name'] }}</option>
+                                @endforeach
+                            </select>
+                            @error('department')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad / Distrito *</label>
+                            <select name="city" :disabled="districts.length === 0"
+                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed">
+                                <option value="">— Seleccioná una ciudad —</option>
+                                <template x-for="district in districts" :key="district">
+                                    <option :value="district"
+                                            :selected="district === '{{ old('city') }}'"
+                                            x-text="district"></option>
+                                </template>
+                            </select>
+                            @error('city')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad *</label>
-                        <input type="text" name="city" value="{{ old('city') }}" placeholder="ej: Luque"
-                               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        @error('city')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div>
+                    <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Barrio</label>
                         <input type="text" name="neighborhood" value="{{ old('neighborhood') }}"
                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">

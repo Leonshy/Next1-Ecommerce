@@ -40,7 +40,33 @@ class CheckoutForm extends Component
 
     // Addresses
     public string $selectedAddressId = '';
-    public array $savedAddresses = [];
+    public array  $savedAddresses    = [];
+    public string $addressMode       = 'saved'; // 'saved' | 'new'
+
+    // New address form fields
+    public string $newLabel           = 'Casa';
+    public string $newRecipientName   = '';
+    public string $newPhone           = '';
+    public string $newNeighborhood    = '';
+    public string $newHouseNumber     = '';
+    public string $newCrossStreet     = '';
+    public string $newReference       = '';
+    public bool   $saveNewAddress     = true;
+
+    // Edit modal
+    public bool   $showEditModal      = false;
+    public string $editingAddressId   = '';
+    public string $editLabel          = '';
+    public string $editRecipientName  = '';
+    public string $editPhone          = '';
+    public string $editDepartment     = '';
+    public string $editCity           = '';
+    public string $editStreetAddress  = '';
+    public string $editNeighborhood   = '';
+    public string $editHouseNumber    = '';
+    public string $editCrossStreet    = '';
+    public string $editReference      = '';
+    public bool   $editIsDefault      = false;
 
     public function mount(): void
     {
@@ -52,13 +78,18 @@ class CheckoutForm extends Component
 
             $this->savedAddresses = UserAddress::where('user_id', $user->id)->get()->toArray();
 
-            $default = collect($this->savedAddresses)->firstWhere('is_default', true);
+            $default = collect($this->savedAddresses)->firstWhere('is_default', true)
+                    ?? collect($this->savedAddresses)->first();
+
             if ($default) {
-                $this->selectAddress($default['id']);
+                $this->selectAddress((string) $default['id']);
+            } else {
+                $this->addressMode = 'new';
             }
+        } else {
+            $this->addressMode = 'new';
         }
 
-        // Setear el método de pago por defecto al primero disponible
         $available = $this->availablePaymentMethods();
         if ($available && !array_key_exists($this->paymentMethod, $available)) {
             $this->paymentMethod = array_key_first($available);
@@ -68,7 +99,9 @@ class CheckoutForm extends Component
     public function selectAddress(string $addressId): void
     {
         $this->selectedAddressId = $addressId;
-        $address = collect($this->savedAddresses)->firstWhere('id', $addressId);
+        $this->addressMode       = 'saved';
+        $address = collect($this->savedAddresses)->firstWhere('id', (int) $addressId)
+                ?? collect($this->savedAddresses)->firstWhere('id', $addressId);
 
         if ($address) {
             $this->shippingAddress    = $address['street_address'];
@@ -78,14 +111,110 @@ class CheckoutForm extends Component
         }
     }
 
+    public function switchToNewAddress(): void
+    {
+        $this->addressMode       = 'new';
+        $this->selectedAddressId = '';
+        $this->shippingAddress    = '';
+        $this->shippingDepartment = '';
+        $this->shippingCity       = '';
+        $this->newRecipientName   = $this->customerName;
+        $this->newPhone           = $this->customerPhone;
+    }
+
+    public function switchToSavedAddress(): void
+    {
+        $this->addressMode = 'saved';
+        $default = collect($this->savedAddresses)->firstWhere('is_default', true)
+                ?? collect($this->savedAddresses)->first();
+        if ($default) {
+            $this->selectAddress((string) $default['id']);
+        }
+    }
+
+    public function openEditModal(string $addressId): void
+    {
+        $address = collect($this->savedAddresses)->firstWhere('id', (int) $addressId)
+                ?? collect($this->savedAddresses)->firstWhere('id', $addressId);
+        if (!$address) return;
+
+        $this->editingAddressId  = $addressId;
+        $this->editLabel         = $address['label']          ?? '';
+        $this->editRecipientName = $address['recipient_name'] ?? '';
+        $this->editPhone         = $address['phone']          ?? '';
+        $this->editDepartment    = $address['department']     ?? '';
+        $this->editCity          = $address['city']           ?? '';
+        $this->editStreetAddress = $address['street_address'] ?? '';
+        $this->editNeighborhood  = $address['neighborhood']   ?? '';
+        $this->editHouseNumber   = $address['house_number']   ?? '';
+        $this->editCrossStreet   = $address['cross_street_1'] ?? '';
+        $this->editReference     = $address['reference']      ?? '';
+        $this->editIsDefault     = (bool) ($address['is_default'] ?? false);
+        $this->showEditModal     = true;
+    }
+
+    public function saveEditedAddress(): void
+    {
+        $this->validate([
+            'editLabel'         => 'required|string|max:100',
+            'editRecipientName' => 'required|string|max:255',
+            'editPhone'         => 'required|string|max:30',
+            'editDepartment'    => 'required|string',
+            'editCity'          => 'required|string',
+            'editStreetAddress' => 'required|string|max:255',
+        ]);
+
+        $address = UserAddress::find($this->editingAddressId);
+        if (!$address || $address->user_id !== auth()->id()) return;
+
+        if ($this->editIsDefault) {
+            UserAddress::where('user_id', auth()->id())->update(['is_default' => false]);
+        }
+
+        $address->update([
+            'label'          => $this->editLabel,
+            'recipient_name' => $this->editRecipientName,
+            'phone'          => $this->editPhone,
+            'department'     => $this->editDepartment,
+            'city'           => $this->editCity,
+            'street_address' => $this->editStreetAddress,
+            'neighborhood'   => $this->editNeighborhood,
+            'house_number'   => $this->editHouseNumber,
+            'cross_street_1' => $this->editCrossStreet,
+            'reference'      => $this->editReference,
+            'is_default'     => $this->editIsDefault,
+        ]);
+
+        $this->savedAddresses = UserAddress::where('user_id', auth()->id())->get()->toArray();
+
+        if ((string) $this->selectedAddressId === (string) $this->editingAddressId) {
+            $this->selectAddress($this->editingAddressId);
+        }
+
+        $this->showEditModal    = false;
+        $this->editingAddressId = '';
+    }
+
+    public function cancelEditModal(): void
+    {
+        $this->showEditModal    = false;
+        $this->editingAddressId = '';
+    }
+
     public function updatedShippingDepartment(): void
     {
+        $this->shippingCity = '';
         $this->calculateShipping();
     }
 
     public function updatedShippingCity(): void
     {
         $this->calculateShipping();
+    }
+
+    public function updatedEditDepartment(): void
+    {
+        $this->editCity = '';
     }
 
     public function calculateShipping(): void
@@ -113,6 +242,43 @@ class CheckoutForm extends Component
 
     public function nextStep(): void
     {
+        if ($this->step === 1) {
+            $this->validate([
+                'customerName'  => 'required|string|max:255',
+                'customerEmail' => 'required|email',
+            ]);
+
+            if ($this->addressMode === 'new') {
+                $this->validate([
+                    'shippingDepartment' => 'required|string',
+                    'shippingCity'       => 'required|string',
+                    'shippingAddress'    => 'required|string|max:255',
+                ]);
+
+                if ($this->saveNewAddress && auth()->check()) {
+                    $saved = UserAddress::create([
+                        'user_id'        => auth()->id(),
+                        'label'          => $this->newLabel ?: 'Casa',
+                        'recipient_name' => $this->newRecipientName ?: $this->customerName,
+                        'phone'          => $this->newPhone ?: $this->customerPhone,
+                        'department'     => $this->shippingDepartment,
+                        'city'           => $this->shippingCity,
+                        'street_address' => $this->shippingAddress,
+                        'neighborhood'   => $this->newNeighborhood,
+                        'house_number'   => $this->newHouseNumber,
+                        'cross_street_1' => $this->newCrossStreet,
+                        'reference'      => $this->newReference,
+                        'is_default'     => false,
+                    ]);
+                    $this->savedAddresses    = UserAddress::where('user_id', auth()->id())->get()->toArray();
+                    $this->selectedAddressId = (string) $saved->id;
+                }
+            } elseif ($this->addressMode === 'saved' && !$this->selectedAddressId) {
+                $this->addError('selectedAddressId', 'Seleccioná una dirección de envío.');
+                return;
+            }
+        }
+
         if ($this->step < 3) $this->step++;
     }
 
@@ -286,9 +452,13 @@ class CheckoutForm extends Component
         $subtotal = array_reduce($cart, fn($c, $i) => $c + ($i['price'] * $i['quantity']), 0.0);
         $total    = max(0, $subtotal - $this->giftCardDiscount + $this->shippingCost);
 
-        $shippingSettings   = ShippingSetting::getDefault();
-        $availablePayments  = $this->availablePaymentMethods();
+        $shippingSettings    = ShippingSetting::getDefault();
+        $availablePayments   = $this->availablePaymentMethods();
+        $activeDepartmentIds = $shippingSettings->getActiveDepartmentIds();
 
-        return view('livewire.checkout-form', compact('cart', 'subtotal', 'total', 'shippingSettings', 'availablePayments'));
+        return view('livewire.checkout-form', compact(
+            'cart', 'subtotal', 'total',
+            'shippingSettings', 'availablePayments', 'activeDepartmentIds'
+        ));
     }
 }

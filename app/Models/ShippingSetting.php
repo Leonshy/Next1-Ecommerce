@@ -33,42 +33,64 @@ class ShippingSetting extends Model
 
     public function calculateShipping(string $department, string $city, float $subtotal): array
     {
-        $settings = $this;
-        $zones = $settings->zones ?? [];
+        $zones = $this->zones ?? [];
 
         foreach ($zones as $zone) {
-            if (strtolower($zone['id']) !== strtolower($department) || !($zone['enabled'] ?? false)) {
+            // Soporta formato nuevo (departmentId/active) y viejo (id/enabled)
+            $zoneId  = $zone['departmentId'] ?? $zone['id'] ?? '';
+            $isActive = isset($zone['active'])
+                ? (bool) $zone['active']
+                : (bool) ($zone['enabled'] ?? false);
+
+            if (strtolower($zoneId) !== strtolower($department) || !$isActive) {
                 continue;
             }
 
-            // Check custom rates first
+            $baseCost         = (float) ($zone['price'] ?? $zone['cost'] ?? 0);
+            $baseDelivery     = $zone['deliveryTime'] ?? '';
+            $baseFreeEligible = (bool) ($zone['freeShippingEligible'] ?? $zone['freeShippingEnabled'] ?? true);
+
+            // Verifica tarifas personalizadas primero
             foreach ($zone['customRates'] ?? [] as $rate) {
-                $areas = array_map('strtolower', $rate['areas'] ?? []);
-                if (in_array(strtolower($city), $areas)) {
-                    $freeShipping = ($rate['freeShippingEnabled'] ?? false)
-                        && $settings->free_shipping_enabled
-                        && $subtotal >= $settings->free_shipping_min_amount;
+                // Soporta districtIds (nuevo) y areas (viejo)
+                $districts = array_map('strtolower', $rate['districtIds'] ?? $rate['areas'] ?? []);
+                if (in_array(strtolower($city), $districts)) {
+                    $freeEligible = (bool) ($rate['freeShippingEligible'] ?? $baseFreeEligible);
+                    $free = $freeEligible
+                        && $this->free_shipping_enabled
+                        && $subtotal >= $this->free_shipping_min_amount;
 
                     return [
-                        'cost'          => $freeShipping ? 0 : (float) $rate['cost'],
-                        'delivery_time' => $rate['deliveryTime'] ?? '',
-                        'free'          => $freeShipping,
+                        'cost'          => $free ? 0 : (float) ($rate['price'] ?? $rate['cost'] ?? 0),
+                        'delivery_time' => $rate['deliveryTime'] ?? $baseDelivery,
+                        'free'          => $free,
                     ];
                 }
             }
 
-            // Fallback to zone base rate
-            $freeShipping = ($zone['freeShippingEnabled'] ?? false)
-                && $settings->free_shipping_enabled
-                && $subtotal >= $settings->free_shipping_min_amount;
+            // Tarifa base del departamento
+            $free = $baseFreeEligible
+                && $this->free_shipping_enabled
+                && $subtotal >= $this->free_shipping_min_amount;
 
             return [
-                'cost'          => $freeShipping ? 0 : (float) $zone['cost'],
-                'delivery_time' => $zone['deliveryTime'] ?? '',
-                'free'          => $freeShipping,
+                'cost'          => $free ? 0 : $baseCost,
+                'delivery_time' => $baseDelivery,
+                'free'          => $free,
             ];
         }
 
         return ['cost' => 0, 'delivery_time' => '', 'free' => false];
+    }
+
+    /** Retorna los IDs de departamentos con envío activo */
+    public function getActiveDepartmentIds(): array
+    {
+        return collect($this->zones ?? [])
+            ->filter(fn($z) => (bool) ($z['active'] ?? $z['enabled'] ?? false))
+            ->pluck('departmentId')
+            ->filter()
+            ->values()
+            ->toArray();
     }
 }

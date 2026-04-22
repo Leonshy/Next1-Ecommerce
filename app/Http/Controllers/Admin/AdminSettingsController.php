@@ -24,12 +24,20 @@ class AdminSettingsController extends Controller
     public function updateShipping(Request $request)
     {
         $settings = ShippingSetting::getDefault();
-        $settings->update($request->only([
-            'free_shipping_enabled', 'free_shipping_min_amount',
-            'store_pickup_enabled', 'envio_propio_enabled', 'zones',
-            'aex_enabled', 'aex_api_user', 'aex_api_password',
-            'aex_environment',
-        ]));
+
+        $zones = json_decode($request->input('zones_json', '[]'), true) ?? [];
+
+        $settings->update([
+            'free_shipping_enabled'    => (bool) $request->input('free_shipping_enabled', false),
+            'free_shipping_min_amount' => (int)  $request->input('free_shipping_min_amount', 0),
+            'store_pickup_enabled'     => (bool) $request->input('store_pickup_enabled', false),
+            'envio_propio_enabled'     => (bool) $request->input('envio_propio_enabled', false),
+            'zones'                    => $zones,
+            'aex_enabled'              => (bool) $request->input('aex_enabled', false),
+            'aex_api_user'             => $request->input('aex_api_user'),
+            'aex_api_password'         => $request->input('aex_api_password'),
+            'aex_environment'          => $request->input('aex_environment', 'sandbox'),
+        ]);
 
         return back()->with('success', 'Configuración de envíos actualizada.');
     }
