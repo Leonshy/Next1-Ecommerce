@@ -9,7 +9,7 @@
                    class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
                 <option value="">Todos los estados</option>
-                @foreach(['pendiente','confirmado','procesando','enviado','entregado','cancelado'] as $s)
+                @foreach(['pendiente','pendiente_transferencia','pendiente_pagopar','confirmado','procesando','enviado','entregado','cancelado'] as $s)
                     <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
                 @endforeach
             </select>

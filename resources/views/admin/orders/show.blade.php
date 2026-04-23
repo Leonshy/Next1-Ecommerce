@@ -57,6 +57,7 @@
                     @foreach([
                         'pendiente'               => 'Pendiente',
                         'pendiente_transferencia' => 'Pend. Transferencia',
+                        'pendiente_pagopar'       => 'Pend. Pagopar',
                         'confirmado'              => 'Confirmado',
                         'procesando'              => 'Procesando',
                         'enviado'                 => 'Enviado',
@@ -99,6 +100,19 @@
                 @endif
             </div>
         </div>
+
+        {{-- Info Pagopar --}}
+        @if($order->pagopar_hash)
+            <div class="bg-white rounded-xl border border-blue-200 p-5">
+                <h3 class="font-semibold mb-3 text-blue-700">🔵 Pagopar</h3>
+                <div class="space-y-1 text-xs text-gray-600 font-mono break-all">
+                    <p><span class="font-semibold text-gray-700">Hash:</span> {{ $order->pagopar_hash }}</p>
+                    @if($order->pagopar_order_id)
+                        <p><span class="font-semibold text-gray-700">Order ID:</span> {{ $order->pagopar_order_id }}</p>
+                    @endif
+                </div>
+            </div>
+        @endif
 
         {{-- Factura --}}
         @if($order->invoice)

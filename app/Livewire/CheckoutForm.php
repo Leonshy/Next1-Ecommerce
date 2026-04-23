@@ -201,6 +201,16 @@ class CheckoutForm extends Component
         $this->editingAddressId = '';
     }
 
+    public function updatedShippingMethod(): void
+    {
+        if ($this->shippingMethod === 'pickup') {
+            $this->shippingCost = 0;
+            $this->deliveryTime = '';
+        } else {
+            $this->calculateShipping();
+        }
+    }
+
     public function updatedShippingDepartment(): void
     {
         $this->shippingCity = '';
@@ -248,34 +258,41 @@ class CheckoutForm extends Component
                 'customerEmail' => 'required|email',
             ]);
 
-            if ($this->addressMode === 'new') {
-                $this->validate([
-                    'shippingDepartment' => 'required|string',
-                    'shippingCity'       => 'required|string',
-                    'shippingAddress'    => 'required|string|max:255',
-                ]);
-
-                if ($this->saveNewAddress && auth()->check()) {
-                    $saved = UserAddress::create([
-                        'user_id'        => auth()->id(),
-                        'label'          => $this->newLabel ?: 'Casa',
-                        'recipient_name' => $this->newRecipientName ?: $this->customerName,
-                        'phone'          => $this->newPhone ?: $this->customerPhone,
-                        'department'     => $this->shippingDepartment,
-                        'city'           => $this->shippingCity,
-                        'street_address' => $this->shippingAddress,
-                        'neighborhood'   => $this->newNeighborhood,
-                        'house_number'   => $this->newHouseNumber,
-                        'cross_street_1' => $this->newCrossStreet,
-                        'reference'      => $this->newReference,
-                        'is_default'     => false,
+            if ($this->shippingMethod === 'pickup') {
+                $this->shippingAddress    = '';
+                $this->shippingDepartment = '';
+                $this->shippingCity       = '';
+                $this->shippingCost       = 0;
+            } else {
+                if ($this->addressMode === 'new') {
+                    $this->validate([
+                        'shippingDepartment' => 'required|string',
+                        'shippingCity'       => 'required|string',
+                        'shippingAddress'    => 'required|string|max:255',
                     ]);
-                    $this->savedAddresses    = UserAddress::where('user_id', auth()->id())->get()->toArray();
-                    $this->selectedAddressId = (string) $saved->id;
+
+                    if ($this->saveNewAddress && auth()->check()) {
+                        $saved = UserAddress::create([
+                            'user_id'        => auth()->id(),
+                            'label'          => $this->newLabel ?: 'Casa',
+                            'recipient_name' => $this->newRecipientName ?: $this->customerName,
+                            'phone'          => $this->newPhone ?: $this->customerPhone,
+                            'department'     => $this->shippingDepartment,
+                            'city'           => $this->shippingCity,
+                            'street_address' => $this->shippingAddress,
+                            'neighborhood'   => $this->newNeighborhood,
+                            'house_number'   => $this->newHouseNumber,
+                            'cross_street_1' => $this->newCrossStreet,
+                            'reference'      => $this->newReference,
+                            'is_default'     => false,
+                        ]);
+                        $this->savedAddresses    = UserAddress::where('user_id', auth()->id())->get()->toArray();
+                        $this->selectedAddressId = (string) $saved->id;
+                    }
+                } elseif ($this->addressMode === 'saved' && !$this->selectedAddressId) {
+                    $this->addError('selectedAddressId', 'Seleccioná una dirección de envío.');
+                    return;
                 }
-            } elseif ($this->addressMode === 'saved' && !$this->selectedAddressId) {
-                $this->addError('selectedAddressId', 'Seleccioná una dirección de envío.');
-                return;
             }
         }
 
@@ -390,11 +407,6 @@ class CheckoutForm extends Component
 
             DB::commit();
 
-            // Email de confirmación (no bloquea el flujo si falla)
-            try {
-                (new \App\Services\SmtpEmailService())->sendOrderConfirmation($order);
-            } catch (\Throwable) {}
-
             if ($this->paymentMethod === 'bancard') {
                 $service   = new \App\Services\BancardService();
                 $processId = time();
@@ -412,7 +424,27 @@ class CheckoutForm extends Component
                 return;
             }
 
-            // Transferencia: redirigir a confirmación
+            if ($this->paymentMethod === 'pagopar') {
+                $service = new \App\Services\PagoparService();
+                $result  = $service->createOrder($order);
+
+                if ($result['success']) {
+                    $order->update([
+                        'status'           => 'pendiente_pagopar',
+                        'pagopar_hash'     => $result['hash'],
+                        'pagopar_order_id' => $result['pagopar_order'],
+                    ]);
+                    $this->redirect($result['redirect_url']);
+                    return;
+                }
+                $this->addError('general', 'Error al iniciar el pago con Pagopar: ' . ($result['message'] ?? ''));
+                return;
+            }
+
+            // Transferencia: notificar admin, redirigir a confirmación
+            try {
+                (new \App\Services\SmtpEmailService())->sendOrderConfirmation($order);
+            } catch (\Throwable) {}
             $this->redirect(route('checkout.confirmation', $order->id));
 
         } catch (\Throwable $e) {
@@ -422,7 +454,7 @@ class CheckoutForm extends Component
         }
     }
 
-    /** Retorna los métodos de pago disponibles: ['bancard' => 'Bancard', 'transferencia' => '...'] */
+    /** Retorna los métodos de pago disponibles */
     public function availablePaymentMethods(): array
     {
         $methods = [];
@@ -432,13 +464,16 @@ class CheckoutForm extends Component
             $methods['bancard'] = 'Bancard (Tarjeta de crédito/débito)';
         }
 
-        // Transferencia siempre disponible si tiene datos configurados
+        $pagopar = \App\Models\PaymentSetting::getProvider('pagopar');
+        if ($pagopar?->is_enabled && !empty($pagopar->public_key) && !empty($pagopar->private_key)) {
+            $methods['pagopar'] = 'Pagopar (Tarjeta / Tigo Money / QR)';
+        }
+
         $transferSettings = \App\Models\SiteContent::getByKey('transfer_settings')?->metadata ?? [];
         if (!empty($transferSettings['bank']) || !empty($transferSettings['account_number'])) {
             $methods['transferencia'] = 'Transferencia bancaria';
         }
 
-        // Si no hay ninguno configurado, mostrar transferencia como fallback
         if (empty($methods)) {
             $methods['transferencia'] = 'Transferencia bancaria';
         }

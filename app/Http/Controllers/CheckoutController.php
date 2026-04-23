@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ShippingSetting;
 use App\Services\BancardService;
+use App\Services\PagoparService;
 use App\Services\SmtpEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -166,5 +167,91 @@ class CheckoutController extends Controller
         $service->handleWebhook($request->all());
 
         return response()->json(['status' => 'success']);
+    }
+
+    // ── Pagopar ───────────────────────────────────────────────────────────────
+
+    public function pagoparWebhook(Request $request)
+    {
+        $payload  = $request->all();
+        $service  = new PagoparService();
+
+        Log::info('Pagopar webhook received', ['payload' => $payload]);
+
+        // Validar token de seguridad
+        if (!$service->validateWebhook($payload)) {
+            Log::warning('Pagopar webhook token inválido', ['payload' => $payload]);
+            return response()->json([['pagado' => false, 'hash_pedido' => '', 'numero_pedido' => '']], 200);
+        }
+
+        $resultado  = $payload['resultado'][0] ?? [];
+        $hashPedido = $resultado['hash_pedido']              ?? null;
+        $pagado     = (bool) ($resultado['pagado']           ?? false);
+        $cancelado  = (bool) ($resultado['cancelado']        ?? false);
+        $nroPedido  = $resultado['numero_comprobante_interno'] ?? $resultado['numero_pedido'] ?? null;
+
+        $order = Order::where('pagopar_hash', $hashPedido)->first();
+
+        if ($order) {
+            $nuevoEstado = $pagado ? 'confirmado' : ($cancelado ? 'cancelado' : $order->status);
+
+            if ($order->status !== $nuevoEstado) {
+                $order->update(['status' => $nuevoEstado]);
+
+                if ($pagado) {
+                    try {
+                        (new SmtpEmailService())->sendOrderConfirmation($order);
+                    } catch (\Throwable) {}
+                }
+            }
+        } else {
+            Log::warning('Pagopar webhook: orden no encontrada', ['hash' => $hashPedido]);
+        }
+
+        // Respuesta requerida por Pagopar
+        return response()->json([[
+            'pagado'        => $pagado,
+            'hash_pedido'   => $hashPedido,
+            'numero_pedido' => $nroPedido,
+        ]], 200);
+    }
+
+    public function pagoparReturn(Request $request)
+    {
+        // Pagopar redirige con ?hash_pedido=xxx en la URL
+        $hash  = $request->query('hash_pedido');
+        $order = $hash ? Order::with('items')->where('pagopar_hash', $hash)->first() : null;
+
+        if (!$order) {
+            Log::warning('Pagopar return: orden no encontrada', ['hash' => $hash]);
+            return redirect()->route('home');
+        }
+
+        if ($order->user_id && $order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Consultar estado real en Pagopar si sigue pendiente
+        if ($order->status === 'pendiente_pagopar') {
+            try {
+                $result = (new PagoparService())->queryOrder($order->pagopar_hash);
+                if ($result['success']) {
+                    if ($result['pagado']) {
+                        $order->update(['status' => 'confirmado']);
+                        $order->refresh();
+                        try {
+                            (new SmtpEmailService())->sendOrderConfirmation($order);
+                        } catch (\Throwable) {}
+                    } elseif ($result['cancelado']) {
+                        $order->update(['status' => 'cancelado']);
+                        $order->refresh();
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error('Pagopar pagoparReturn query error', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return redirect()->route('checkout.confirmation', $order->id);
     }
 }

@@ -7,7 +7,7 @@
     @php
     $providers = [
         'bancard'  => ['name' => 'Bancard VPOS', 'icon' => '💳', 'fields' => ['public_key' => 'Public Key', 'private_key' => 'Private Key']],
-        'pagopar'  => ['name' => 'PagoPar',      'icon' => '🔵', 'fields' => ['public_key' => 'Public Key', 'private_key' => 'Private Key']],
+        'pagopar'  => ['name' => 'PagoPar',      'icon' => '🔵', 'fields' => ['public_key' => 'Token Público', 'private_key' => 'Token Privado']],
         'coinbase' => ['name' => 'Coinbase Commerce', 'icon' => '🟡', 'fields' => ['public_key' => 'API Key', 'webhook_secret' => 'Webhook Secret']],
         'coinspaid'=> ['name' => 'CoinsPaid',    'icon' => '🟠', 'fields' => ['public_key' => 'Public Key', 'private_key' => 'Secret Key']],
     ];
@@ -74,6 +74,30 @@
                 </button>
             </div>
         </form>
+
+        @if($key === 'pagopar')
+        <div class="mt-4 pt-4 border-t border-gray-100">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">URLs para configurar en tu cuenta Pagopar</p>
+            <div class="space-y-2">
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">URL de Respuesta (Webhook)</p>
+                    <div class="flex items-center gap-2">
+                        <code class="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-mono text-gray-700 select-all">{{ url('/webhooks/pagopar') }}</code>
+                        <button type="button" onclick="navigator.clipboard.writeText('{{ url('/webhooks/pagopar') }}'); this.textContent='✓'; setTimeout(()=>this.textContent='Copiar',1500)"
+                                class="shrink-0 text-xs px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Copiar</button>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">URL de Redireccionamiento</p>
+                    <div class="flex items-center gap-2">
+                        <code class="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-mono text-gray-700 select-all">{{ url('/checkout/pagopar/retorno') }}</code>
+                        <button type="button" onclick="navigator.clipboard.writeText('{{ url('/checkout/pagopar/retorno') }}'); this.textContent='✓'; setTimeout(()=>this.textContent='Copiar',1500)"
+                                class="shrink-0 text-xs px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Copiar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
 
         {{-- Form separado para validar (no puede estar anidado) --}}
         <form id="validate-{{ $key }}" method="POST"

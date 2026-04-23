@@ -49,7 +49,33 @@
 
             <hr class="border-gray-100">
 
-            {{-- Dirección de envío --}}
+            {{-- Método de entrega (si pickup está habilitado) --}}
+            @if($shippingSettings->store_pickup_enabled)
+            <div>
+                <h2 class="font-semibold text-gray-900 mb-3">¿Cómo querés recibir tu pedido?</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer {{ $shippingMethod === 'envio' ? 'border-blue-600 bg-blue-50' : 'border-gray-200' }}">
+                        <input type="radio" wire:model.live="shippingMethod" value="envio" class="text-blue-600">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">🚚 Envío a domicilio</p>
+                            <p class="text-xs text-gray-500">Te lo llevamos</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer {{ $shippingMethod === 'pickup' ? 'border-blue-600 bg-blue-50' : 'border-gray-200' }}">
+                        <input type="radio" wire:model.live="shippingMethod" value="pickup" class="text-blue-600">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">🏪 Retiro en tienda</p>
+                            <p class="text-xs text-green-600 font-medium">Gratis</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+            @endif
+
+            {{-- Dirección de envío (solo si no es pickup) --}}
+            @if($shippingMethod !== 'pickup')
             <div>
                 <h2 class="font-semibold text-gray-900 mb-4">Dirección de envío</h2>
 
@@ -210,6 +236,7 @@
                     </div>
                 @endif
             </div>
+            @endif {{-- fin @if shippingMethod !== pickup --}}
 
             <div class="flex justify-end pt-2">
                 <button wire:click="nextStep"
@@ -335,30 +362,31 @@
         {{-- Step 2: Envío --}}
         @if($step === 2)
         <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-            <h2 class="font-semibold text-gray-900">Método de envío</h2>
+            <h2 class="font-semibold text-gray-900">Resumen de envío</h2>
 
-            <label class="flex items-center justify-between p-4 border rounded-xl cursor-pointer {{ $shippingMethod === 'envio' ? 'border-blue-600 bg-blue-50' : 'border-gray-200' }}">
-                <div class="flex items-center space-x-3">
-                    <input type="radio" wire:model="shippingMethod" value="envio" class="text-blue-600">
-                    <div>
-                        <p class="font-medium text-sm">Envío a domicilio</p>
-                        @if($deliveryTime)<p class="text-xs text-gray-500">{{ $deliveryTime }}</p>@endif
+            @if($shippingMethod === 'pickup')
+                <div class="flex items-center justify-between p-4 border border-green-300 bg-green-50 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🏪</span>
+                        <div>
+                            <p class="font-medium text-sm text-gray-900">Retiro en tienda</p>
+                            <p class="text-xs text-gray-500">Pasá a buscar tu pedido cuando esté listo</p>
+                        </div>
                     </div>
+                    <span class="font-semibold text-sm text-green-600">Gratis</span>
                 </div>
-                <span class="font-semibold text-sm">{{ $shippingCost > 0 ? 'Gs. ' . number_format($shippingCost, 0, ',', '.') : 'Gratis' }}</span>
-            </label>
-
-            @if($shippingSettings->store_pickup_enabled)
-            <label class="flex items-center justify-between p-4 border rounded-xl cursor-pointer {{ $shippingMethod === 'pickup' ? 'border-blue-600 bg-blue-50' : 'border-gray-200' }}">
-                <div class="flex items-center space-x-3">
-                    <input type="radio" wire:model="shippingMethod" value="pickup" class="text-blue-600">
-                    <div>
-                        <p class="font-medium text-sm">Retiro en tienda</p>
-                        <p class="text-xs text-gray-500">Gratis</p>
+            @else
+                <div class="flex items-center justify-between p-4 border border-blue-200 bg-blue-50 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🚚</span>
+                        <div>
+                            <p class="font-medium text-sm text-gray-900">Envío a domicilio</p>
+                            @if($shippingAddress)<p class="text-xs text-gray-500">{{ $shippingAddress }}, {{ $shippingCity }}</p>@endif
+                            @if($deliveryTime)<p class="text-xs text-gray-500">{{ $deliveryTime }}</p>@endif
+                        </div>
                     </div>
+                    <span class="font-semibold text-sm">{{ $shippingCost > 0 ? 'Gs. ' . number_format($shippingCost, 0, ',', '.') : 'Gratis' }}</span>
                 </div>
-                <span class="font-semibold text-sm text-green-600">Gratis</span>
-            </label>
             @endif
 
             <div class="flex justify-between">
@@ -382,8 +410,8 @@
             {{-- Métodos de pago disponibles (dinámico según config admin) --}}
             @forelse($availablePayments as $key => $label)
                 @php
-                    $icons = ['bancard' => '💳', 'transferencia' => '🏦'];
-                    $subs  = ['bancard' => 'Visa, Mastercard', 'transferencia' => 'Subí tu comprobante al finalizar'];
+                    $icons = ['bancard' => '💳', 'transferencia' => '🏦', 'pagopar' => '🔵'];
+                    $subs  = ['bancard' => 'Visa, Mastercard', 'transferencia' => 'Subí tu comprobante al finalizar', 'pagopar' => 'Tarjeta, Tigo Money, QR'];
                 @endphp
                 <label class="flex items-center space-x-3 p-4 border rounded-xl cursor-pointer {{ $paymentMethod === $key ? 'border-blue-600 bg-blue-50' : 'border-gray-200' }}">
                     <input type="radio" wire:model.live="paymentMethod" value="{{ $key }}" class="text-blue-600">

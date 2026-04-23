@@ -17,6 +17,7 @@ class Order extends Model
         'order_number', 'user_id', 'status', 'customer_name', 'customer_email',
         'customer_phone', 'shipping_address', 'shipping_city', 'subtotal',
         'discount', 'shipping_cost', 'total', 'notes', 'bancard_process_id',
+        'pagopar_hash', 'pagopar_order_id',
         'guest_access_token', 'payment_method', 'transfer_receipt',
     ];
 
@@ -73,6 +74,7 @@ class Order extends Model
         return match($this->status) {
             'pendiente'                => 'Pendiente',
             'pendiente_transferencia'  => 'Pend. Transferencia',
+            'pendiente_pagopar'        => 'Pend. Pagopar',
             'confirmado'               => 'Confirmado',
             'procesando'               => 'Procesando',
             'enviado'                  => 'Enviado',
@@ -87,7 +89,8 @@ class Order extends Model
         return match($this->status) {
             'pendiente'               => 'yellow',
             'pendiente_transferencia' => 'orange',
-            'confirmado'              => 'blue',
+            'pendiente_pagopar'       => 'blue',
+            'confirmado'              => 'green',
             'procesando'              => 'purple',
             'enviado'                 => 'indigo',
             'entregado'               => 'green',

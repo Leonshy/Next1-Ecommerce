@@ -79,10 +79,17 @@ Route::get('/newsletter/verificar/{token}', [NewsletterController::class, 'verif
     ->name('newsletter.verify')
     ->middleware('throttle:10,1');
 
-// Webhook Bancard (público, sin CSRF, sin mantenimiento)
+// Webhooks de pago (públicos, sin CSRF, sin mantenimiento)
 Route::post('/webhooks/bancard', [CheckoutController::class, 'bancardWebhook'])
     ->name('webhooks.bancard')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::post('/webhooks/pagopar', [CheckoutController::class, 'pagoparWebhook'])
+    ->name('webhooks.pagopar')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::get('/checkout/pagopar/retorno', [CheckoutController::class, 'pagoparReturn'])
+    ->name('checkout.pagopar.return');
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin,vendedor', 'admin.timeout', 'admin.audit'])->prefix('admin')->name('admin.')->group(function () {

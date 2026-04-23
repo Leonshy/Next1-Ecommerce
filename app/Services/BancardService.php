@@ -107,7 +107,17 @@ class BancardService
         if (!$order) return false;
 
         $approved = $response === 'S' && $responseCode === '00';
-        $order->update(['status' => $approved ? 'confirmado' : 'cancelado']);
+        $newStatus = $approved ? 'confirmado' : 'cancelado';
+
+        if ($order->status !== $newStatus) {
+            $order->update(['status' => $newStatus]);
+
+            if ($approved) {
+                try {
+                    (new \App\Services\SmtpEmailService())->sendOrderConfirmation($order);
+                } catch (\Throwable) {}
+            }
+        }
 
         return true;
     }
