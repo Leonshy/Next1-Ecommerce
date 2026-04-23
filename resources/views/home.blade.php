@@ -103,14 +103,14 @@
                                 </div>
                             @endforeach
 
-                            {{-- Prev / Next --}}
+                            {{-- Prev / Next: ocultas en mobile (deslizar con el dedo), visibles en sm+ --}}
                             <button @click="active = (active - 1 + total) % total"
-                                    class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-colors z-10">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                                    class="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-black/20 hover:bg-black/50 text-white items-center justify-center transition-all z-10 rounded-full opacity-70 hover:opacity-100">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
                             </button>
                             <button @click="active = (active + 1) % total"
-                                    class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-colors z-10">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                    class="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-black/20 hover:bg-black/50 text-white items-center justify-center transition-all z-10 rounded-full opacity-70 hover:opacity-100">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                             </button>
 
                             {{-- Dots --}}
@@ -152,47 +152,47 @@
                      x-data="{ cur: 0, total: {{ $hotDeals->count() }}, perPage: 4 }"
                      x-init="perPage = window.innerWidth < 640 ? 2 : 4; window.addEventListener('resize', () => { perPage = window.innerWidth < 640 ? 2 : 4; cur = Math.min(cur, Math.max(0, total - perPage)); })">
 
-                    {{-- Header con forma de flecha --}}
-                    <div class="flex items-center justify-between mb-6 border-b-2 border-border">
-                        <div class="flex items-center">
-                            {{-- Título con flecha --}}
-                            <h2 class="bg-destructive text-white font-bold text-sm uppercase px-6 py-3 relative">
+                    {{-- Header: fila 1 título + ver todos, fila 2 countdown --}}
+                    <div class="mb-6">
+                        {{-- Fila 1: Título + Ver todos (la línea va aquí, entre fila 1 y fila 2) --}}
+                        <div class="flex items-center justify-between border-b-2 border-border">
+                            <h2 class="bg-destructive text-white font-bold text-xs sm:text-sm uppercase px-4 sm:px-6 py-3 relative flex-shrink-0">
                                 OFERTAS DEL DÍA
                                 <span class="absolute -right-3 top-0 h-full w-3 bg-destructive"
                                       style="clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
                             </h2>
-                            {{-- Countdown --}}
-                            <div class="flex items-center gap-2 bg-white px-4 py-2 border-b-2 border-transparent -mb-0.5"
-                                 x-data="{
-                                    h:'00', m:'00', s:'00',
-                                    tick(){
-                                        const now=new Date(), end=new Date();
-                                        end.setHours(23,59,59,999);
-                                        let d=Math.max(0,Math.floor((end-now)/1000));
-                                        this.h=String(Math.floor(d/3600)).padStart(2,'0');
-                                        this.m=String(Math.floor((d%3600)/60)).padStart(2,'0');
-                                        this.s=String(d%60).padStart(2,'0');
-                                    }
-                                 }"
-                                 x-init="tick(); setInterval(()=>tick(),1000)">
-                                <svg class="w-4 h-4 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                                </svg>
-                                <span class="text-sm font-medium text-gray-500">Termina en:</span>
-                                <div class="flex items-center gap-1 font-mono font-bold">
-                                    <span class="bg-destructive text-white px-2 py-1 rounded text-sm" x-text="h"></span>
-                                    <span class="text-destructive font-black">:</span>
-                                    <span class="bg-destructive text-white px-2 py-1 rounded text-sm" x-text="m"></span>
-                                    <span class="text-destructive font-black">:</span>
-                                    <span class="bg-destructive text-white px-2 py-1 rounded text-sm" x-text="s"></span>
-                                </div>
+                            <a href="{{ route('products.index', ['tag' => 'ofertas']) }}"
+                               class="flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-colors flex-shrink-0">
+                                Ver todos
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </a>
+                        </div>
+                        {{-- Fila 2: Countdown (sin fondo blanco) --}}
+                        <div class="flex items-center gap-2 pt-3 pb-2 pl-1"
+                             x-data="{
+                                h:'00', m:'00', s:'00',
+                                tick(){
+                                    const now=new Date(), end=new Date();
+                                    end.setHours(23,59,59,999);
+                                    let d=Math.max(0,Math.floor((end-now)/1000));
+                                    this.h=String(Math.floor(d/3600)).padStart(2,'0');
+                                    this.m=String(Math.floor((d%3600)/60)).padStart(2,'0');
+                                    this.s=String(d%60).padStart(2,'0');
+                                }
+                             }"
+                             x-init="tick(); setInterval(()=>tick(),1000)">
+                            <svg class="w-4 h-4 text-destructive flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span class="text-sm font-medium text-gray-500 whitespace-nowrap">Termina en:</span>
+                            <div class="flex items-center gap-0.5 sm:gap-1 font-mono font-bold">
+                                <span class="bg-destructive text-white px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm" x-text="h"></span>
+                                <span class="text-destructive font-black text-xs sm:text-sm">:</span>
+                                <span class="bg-destructive text-white px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm" x-text="m"></span>
+                                <span class="text-destructive font-black text-xs sm:text-sm">:</span>
+                                <span class="bg-destructive text-white px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm" x-text="s"></span>
                             </div>
                         </div>
-                        <a href="{{ route('products.index', ['tag' => 'ofertas']) }}"
-                           class="flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-colors pb-2">
-                            Ver todos
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </a>
                     </div>
 
                     {{-- Carrusel con botones circulares en fila --}}

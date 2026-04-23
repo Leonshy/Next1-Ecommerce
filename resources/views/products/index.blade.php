@@ -114,16 +114,16 @@
         <div class="flex-1 min-w-0">
 
             {{-- Barra superior --}}
-            <div class="flex items-center justify-between mb-5 pb-3 border-b border-border">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-5 pb-3 border-b border-border">
                 <p class="text-sm text-muted-foreground">
                     <span class="font-semibold text-foreground">{{ $products->total() }}</span>
                     producto{{ $products->total() !== 1 ? 's' : '' }} encontrado{{ $products->total() !== 1 ? 's' : '' }}
                 </p>
                 <select name="orden" onchange="document.getElementById('filter-form').submit()" form="filter-form"
-                        class="border border-border px-3 py-1.5 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        class="border border-border px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 max-w-[160px] sm:max-w-none">
                     <option value="relevancia" {{ request('orden') === 'relevancia' ? 'selected' : '' }}>Más relevantes</option>
-                    <option value="precio_asc" {{ request('orden') === 'precio_asc' ? 'selected' : '' }}>Precio: menor a mayor</option>
-                    <option value="precio_desc" {{ request('orden') === 'precio_desc' ? 'selected' : '' }}>Precio: mayor a menor</option>
+                    <option value="precio_asc" {{ request('orden') === 'precio_asc' ? 'selected' : '' }}>Precio ↑</option>
+                    <option value="precio_desc" {{ request('orden') === 'precio_desc' ? 'selected' : '' }}>Precio ↓</option>
                     <option value="nuevo" {{ request('orden') === 'nuevo' ? 'selected' : '' }}>Más nuevos</option>
                 </select>
             </div>

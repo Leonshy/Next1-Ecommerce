@@ -12,17 +12,30 @@
         @if($orders->count())
             <div class="space-y-4">
                 @foreach($orders as $order)
+                    @php
+                    $stBadge = match($order->status) {
+                        'pendiente'               => 'bg-yellow-100 text-yellow-700',
+                        'pendiente_transferencia' => 'bg-orange-100 text-orange-700',
+                        'pendiente_pagopar'       => 'bg-blue-100 text-blue-700',
+                        'confirmado'              => 'bg-green-100 text-green-700',
+                        'procesando'              => 'bg-purple-100 text-purple-700',
+                        'enviado'                 => 'bg-indigo-100 text-indigo-700',
+                        'entregado'               => 'bg-green-100 text-green-700',
+                        'cancelado'               => 'bg-red-100 text-red-700',
+                        default                   => 'bg-gray-100 text-gray-700',
+                    };
+                    @endphp
                     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow">
-                        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                            <div>
-                                <span class="font-semibold text-gray-900">{{ $order->order_number }}</span>
-                                <span class="ml-3 text-xs text-gray-400">{{ $order->created_at->format('d/m/Y H:i') }}</span>
+                        <div class="px-4 sm:px-5 py-4 border-b border-gray-100">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-semibold text-gray-900 truncate">{{ $order->order_number }}</span>
+                                <span class="font-bold text-gray-900 whitespace-nowrap flex-shrink-0">Gs. {{ $order->formatted_total }}</span>
                             </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $order->status_color }}-100 text-{{ $order->status_color }}-700">
+                            <div class="flex items-center justify-between mt-1 gap-2">
+                                <span class="text-xs text-gray-400">{{ $order->created_at->format('d/m/Y H:i') }}</span>
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium {{ $stBadge }} whitespace-nowrap flex-shrink-0">
                                     {{ $order->status_label }}
                                 </span>
-                                <span class="font-bold text-gray-900">Gs. {{ $order->formatted_total }}</span>
                             </div>
                         </div>
                         <div class="px-5 py-3 flex items-center justify-between">

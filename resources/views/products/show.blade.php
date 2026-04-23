@@ -2,17 +2,17 @@
 <div class="container mx-auto px-4 py-8">
 
     {{-- Breadcrumb --}}
-    <nav class="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <a href="{{ route('home') }}" class="hover:text-primary transition-colors">Inicio</a>
-        <span>/</span>
-        <a href="{{ route('products.index') }}" class="hover:text-primary transition-colors">Productos</a>
+    <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground mb-6">
+        <a href="{{ route('home') }}" class="hover:text-primary transition-colors flex-shrink-0">Inicio</a>
+        <span class="flex-shrink-0">/</span>
+        <a href="{{ route('products.index') }}" class="hover:text-primary transition-colors flex-shrink-0">Productos</a>
         @if($product->category)
-            <span>/</span>
+            <span class="flex-shrink-0">/</span>
             <a href="{{ route('products.index', ['categoria' => $product->category->slug]) }}"
-               class="hover:text-primary transition-colors">{{ $product->category->name }}</a>
+               class="hover:text-primary transition-colors flex-shrink-0">{{ $product->category->name }}</a>
         @endif
-        <span>/</span>
-        <span class="text-foreground font-medium">{{ $product->name }}</span>
+        <span class="flex-shrink-0">/</span>
+        <span class="text-foreground font-medium truncate max-w-[180px] sm:max-w-none">{{ $product->name }}</span>
     </nav>
 
     {{-- ===== Wrapper Alpine (maneja imagen activa + longOpen) ===== --}}
@@ -27,15 +27,19 @@
     {{-- ===== FILA 1: Galería + Info ===== --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
 
-        {{-- ── GALERÍA (izq): miniaturas izquierda + imagen principal derecha ── --}}
-        <div class="flex gap-3">
+        {{-- ── GALERÍA ──
+             Mobile:  imagen principal arriba, miniaturas como fila horizontal debajo
+             md+:     miniaturas columna vertical izquierda, imagen principal derecha --}}
+        <div class="flex flex-col-reverse gap-3 md:flex-row">
 
-            {{-- Miniaturas verticales (izquierda) --}}
+            {{-- Miniaturas: fila horizontal con scroll en mobile, columna en md+ --}}
             @if($hasGallery)
-            <div class="flex flex-col gap-2 flex-shrink-0">
+            <div class="flex flex-row gap-2 overflow-x-auto pb-1
+                        md:flex-col md:overflow-x-visible md:pb-0 md:max-h-[420px] md:overflow-y-auto
+                        flex-shrink-0">
                 @foreach($product->productImages as $img)
                     <button @click="activeImg = '{{ $img->image_url }}'"
-                            class="w-16 h-16 flex-shrink-0 overflow-hidden border-2 rounded transition-colors"
+                            class="w-14 h-14 flex-shrink-0 overflow-hidden border-2 rounded transition-colors"
                             :class="activeImg === '{{ $img->image_url }}' ? 'border-primary' : 'border-border hover:border-primary/50'">
                         <img src="{{ $img->image_url }}" alt="" class="w-full h-full object-contain p-1">
                     </button>
@@ -43,8 +47,8 @@
             </div>
             @endif
 
-            {{-- Imagen principal (derecha dentro del 50%) --}}
-            <div class="flex-1 aspect-square bg-background border border-border overflow-hidden p-4">
+            {{-- Imagen principal --}}
+            <div class="w-full md:flex-1 aspect-square bg-background border border-border overflow-hidden p-4">
                 <img :src="activeImg"
                      alt="{{ $product->name }}"
                      class="w-full h-full object-contain"
@@ -58,7 +62,7 @@
                 <p class="text-sm text-muted-foreground mb-1 uppercase tracking-wide">{{ $product->brand->name }}</p>
             @endif
 
-            <h1 class="text-2xl font-bold text-foreground mb-3 leading-tight">{{ $product->name }}</h1>
+            <h1 class="text-xl sm:text-2xl font-bold text-foreground mb-3 leading-tight">{{ $product->name }}</h1>
 
             {{-- Rating --}}
             @if($product->rating > 0)
@@ -82,7 +86,7 @@
                     <p class="text-sm text-muted-foreground line-through">₲ {{ number_format($product->original_price, 0, ',', '.') }}</p>
                 @endif
                 <div class="flex items-center gap-3">
-                    <span class="text-3xl font-black text-primary">₲ {{ number_format($product->price, 0, ',', '.') }}</span>
+                    <span class="text-2xl sm:text-3xl font-black text-primary">₲ {{ number_format($product->price, 0, ',', '.') }}</span>
                     @if($product->discount_percent)
                         <span class="bg-destructive text-white text-sm px-2 py-0.5 font-bold">-{{ $product->discount_percent }}%</span>
                     @endif
@@ -194,45 +198,47 @@
              x-data="{ cur: 0, total: {{ $hotDeals->count() }}, perPage: 4 }"
              x-init="perPage = window.innerWidth < 640 ? 2 : 4; window.addEventListener('resize', () => { perPage = window.innerWidth < 640 ? 2 : 4; cur = Math.min(cur, Math.max(0, total - perPage)); })">
 
-        {{-- Header --}}
-        <div class="flex items-center justify-between mb-6 border-b-2 border-border">
-            <div class="flex items-center">
-                <h2 class="bg-destructive text-white font-bold text-sm uppercase px-6 py-3 relative">
+        {{-- Header: fila 1 título + ver todos, fila 2 countdown --}}
+        <div class="mb-6">
+            {{-- Fila 1: Título + Ver todos --}}
+            <div class="flex items-center justify-between border-b-2 border-border">
+                <h2 class="bg-destructive text-white font-bold text-xs sm:text-sm uppercase px-4 sm:px-6 py-3 relative flex-shrink-0">
                     OFERTAS DEL DÍA
                     <span class="absolute -right-3 top-0 h-full w-3 bg-destructive"
                           style="clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
                 </h2>
-                <div class="flex items-center gap-2 bg-white px-4 py-2 -mb-0.5"
-                     x-data="{
-                        h:'00', m:'00', s:'00',
-                        tick(){
-                            const now=new Date(), end=new Date();
-                            end.setHours(23,59,59,999);
-                            let d=Math.max(0,Math.floor((end-now)/1000));
-                            this.h=String(Math.floor(d/3600)).padStart(2,'0');
-                            this.m=String(Math.floor((d%3600)/60)).padStart(2,'0');
-                            this.s=String(d%60).padStart(2,'0');
-                        }
-                     }"
-                     x-init="tick(); setInterval(()=>tick(),1000)">
-                    <svg class="w-4 h-4 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                    <span class="text-sm font-medium text-gray-500">Termina en:</span>
-                    <div class="flex items-center gap-1 font-mono font-bold">
-                        <span class="bg-destructive text-white px-2 py-1 rounded text-sm" x-text="h"></span>
-                        <span class="text-destructive font-black">:</span>
-                        <span class="bg-destructive text-white px-2 py-1 rounded text-sm" x-text="m"></span>
-                        <span class="text-destructive font-black">:</span>
-                        <span class="bg-destructive text-white px-2 py-1 rounded text-sm" x-text="s"></span>
-                    </div>
+                <a href="{{ route('products.index', ['tag' => 'ofertas']) }}"
+                   class="flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-colors flex-shrink-0">
+                    Ver todos
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+            {{-- Fila 2: Countdown (sin fondo blanco) --}}
+            <div class="flex items-center gap-2 pt-3 pb-2 pl-1"
+                 x-data="{
+                    h:'00', m:'00', s:'00',
+                    tick(){
+                        const now=new Date(), end=new Date();
+                        end.setHours(23,59,59,999);
+                        let d=Math.max(0,Math.floor((end-now)/1000));
+                        this.h=String(Math.floor(d/3600)).padStart(2,'0');
+                        this.m=String(Math.floor((d%3600)/60)).padStart(2,'0');
+                        this.s=String(d%60).padStart(2,'0');
+                    }
+                 }"
+                 x-init="tick(); setInterval(()=>tick(),1000)">
+                <svg class="w-4 h-4 text-destructive flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span class="text-sm font-medium text-gray-500 whitespace-nowrap">Termina en:</span>
+                <div class="flex items-center gap-0.5 sm:gap-1 font-mono font-bold">
+                    <span class="bg-destructive text-white px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm" x-text="h"></span>
+                    <span class="text-destructive font-black text-xs sm:text-sm">:</span>
+                    <span class="bg-destructive text-white px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm" x-text="m"></span>
+                    <span class="text-destructive font-black text-xs sm:text-sm">:</span>
+                    <span class="bg-destructive text-white px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm" x-text="s"></span>
                 </div>
             </div>
-            <a href="{{ route('products.index', ['tag' => 'ofertas']) }}"
-               class="flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-colors pb-2">
-                Ver todos
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </a>
         </div>
 
         {{-- Carrusel --}}

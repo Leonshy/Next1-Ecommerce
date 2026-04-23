@@ -9,23 +9,36 @@
             <h1 class="text-2xl font-bold text-gray-900">Pedido {{ $order->order_number }}</h1>
         </div>
 
+        @php
+        $stBadge = match($order->status) {
+            'pendiente'               => 'bg-yellow-100 text-yellow-700',
+            'pendiente_transferencia' => 'bg-orange-100 text-orange-700',
+            'pendiente_pagopar'       => 'bg-blue-100 text-blue-700',
+            'confirmado'              => 'bg-green-100 text-green-700',
+            'procesando'              => 'bg-purple-100 text-purple-700',
+            'enviado'                 => 'bg-indigo-100 text-indigo-700',
+            'entregado'               => 'bg-green-100 text-green-700',
+            'cancelado'               => 'bg-red-100 text-red-700',
+            default                   => 'bg-gray-100 text-gray-700',
+        };
+        @endphp
         {{-- Estado --}}
         <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-            <div class="flex items-center justify-between">
+            <div class="flex items-start justify-between gap-4">
                 <div>
                     <p class="text-sm text-gray-500">Estado actual</p>
-                    <span class="inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold bg-{{ $order->status_color }}-100 text-{{ $order->status_color }}-700">
+                    <span class="inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold {{ $stBadge }}">
                         {{ $order->status_label }}
                     </span>
                 </div>
-                <div class="text-right">
+                <div class="text-right flex-shrink-0">
                     <p class="text-sm text-gray-500">Fecha</p>
-                    <p class="font-medium">{{ $order->created_at->format('d/m/Y H:i') }}</p>
+                    <p class="font-medium text-sm">{{ $order->created_at->format('d/m/Y H:i') }}</p>
                 </div>
             </div>
 
             {{-- Timeline de estados --}}
-            <div class="mt-5 flex items-center justify-between relative">
+            <div class="mt-5 flex items-center justify-between relative overflow-hidden">
                 <div class="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
                 @php
                     $estados = ['pendiente', 'confirmado', 'procesando', 'enviado', 'entregado'];
@@ -34,16 +47,20 @@
                 @foreach($estados as $i => $estado)
                     @php $done = $currentIdx !== false && $i <= $currentIdx; @endphp
                     <div class="relative z-10 flex flex-col items-center">
-                        <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs
+                        <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center text-xs
                             {{ $done ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-400' }}">
                             {{ $done ? '✓' : ($i + 1) }}
                         </div>
-                        <span class="text-xs mt-1 {{ $done ? 'text-blue-600 font-medium' : 'text-gray-400' }}">
+                        <span class="hidden sm:block text-xs mt-1 {{ $done ? 'text-blue-600 font-medium' : 'text-gray-400' }}">
                             {{ ucfirst($estado) }}
                         </span>
                     </div>
                 @endforeach
             </div>
+            {{-- Labels solo en mobile (bajo los círculos) --}}
+            <p class="sm:hidden text-xs text-center mt-2 text-blue-600 font-medium">
+                @php echo ucfirst($estados[$currentIdx] ?? 'pendiente'); @endphp
+            </p>
         </div>
 
         {{-- Productos --}}

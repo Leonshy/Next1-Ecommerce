@@ -4,13 +4,13 @@
     <div class="lg:col-span-2">
 
         {{-- Step indicator --}}
-        <div class="flex items-center space-x-4 mb-6">
+        <div class="flex items-center space-x-2 sm:space-x-4 mb-6">
             @foreach(['Dirección' => 1, 'Envío' => 2, 'Pago' => 3] as $label => $s)
-                <div class="flex items-center space-x-2">
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold {{ $step >= $s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400' }}">
+                <div class="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+                    <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold {{ $step >= $s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400' }}">
                         {{ $s }}
                     </div>
-                    <span class="text-sm {{ $step >= $s ? 'text-gray-900 font-medium' : 'text-gray-400' }}">{{ $label }}</span>
+                    <span class="text-xs sm:text-sm {{ $step >= $s ? 'text-gray-900 font-medium' : 'text-gray-400' }}">{{ $label }}</span>
                 </div>
                 @if($s < 3)
                     <div class="flex-1 h-px {{ $step > $s ? 'bg-blue-600' : 'bg-gray-200' }}"></div>

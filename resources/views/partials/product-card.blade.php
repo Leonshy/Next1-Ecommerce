@@ -86,21 +86,19 @@
             <p class="text-lg font-bold text-primary">₲ {{ number_format($product->price, 0, ',', '.') }}</p>
         </div>
 
-        {{-- Quantity selector --}}
-        <div x-data="{ qty: 1 }" class="flex items-center justify-center gap-2 py-1">
-            <button @click="qty = Math.max(1, qty - 1)"
-                    class="w-7 h-7 border border-border flex items-center justify-center hover:border-primary hover:text-primary transition-colors text-foreground">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-            </button>
-            <span x-text="qty" class="text-sm font-medium w-8 text-center"></span>
-            <button @click="qty++"
-                    class="w-7 h-7 border border-border flex items-center justify-center hover:border-primary hover:text-primary transition-colors text-foreground">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            </button>
-        </div>
-
-        {{-- Agregar al carrito --}}
+        {{-- Quantity + Cart (scope único para que qty sea compartida) --}}
         <div x-data="{ qty: 1 }">
+            <div class="flex items-center justify-center gap-2 py-1">
+                <button @click="qty = Math.max(1, qty - 1)"
+                        class="w-7 h-7 border border-border flex items-center justify-center hover:border-primary hover:text-primary transition-colors text-foreground">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                </button>
+                <span x-text="qty" class="text-sm font-medium w-8 text-center"></span>
+                <button @click="qty++"
+                        class="w-7 h-7 border border-border flex items-center justify-center hover:border-primary hover:text-primary transition-colors text-foreground">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                </button>
+            </div>
             <button @click="$dispatch('cart:add', { productId: '{{ $product->id }}', quantity: qty })"
                     class="w-full bg-accent text-white text-xs uppercase font-semibold px-3 py-2.5
                            flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
