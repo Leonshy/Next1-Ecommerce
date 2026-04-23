@@ -407,6 +407,14 @@ class CheckoutForm extends Component
 
             DB::commit();
 
+            // Vaciar carrito
+            if (auth()->check()) {
+                \App\Models\Cart::where('user_id', auth()->id())->update(['items' => json_encode([])]);
+            } else {
+                session()->forget('cart');
+            }
+
+
             if ($this->paymentMethod === 'bancard') {
                 $service   = new \App\Services\BancardService();
                 $processId = time();

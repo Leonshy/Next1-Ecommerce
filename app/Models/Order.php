@@ -73,11 +73,11 @@ class Order extends Model
     {
         return match($this->status) {
             'pendiente'                => 'Pendiente',
-            'pendiente_transferencia'  => 'Pend. Transferencia',
+            'pendiente_transferencia'  => 'Pend. Verificación',
             'pendiente_pagopar'        => 'Pend. Pagopar',
             'confirmado'               => 'Confirmado',
             'procesando'               => 'Procesando',
-            'enviado'                  => 'Enviado',
+            'enviado'                  => 'En camino',
             'entregado'                => 'Entregado',
             'cancelado'                => 'Cancelado',
             default                    => $this->status,
