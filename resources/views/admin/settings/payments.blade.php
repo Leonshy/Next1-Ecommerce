@@ -90,8 +90,8 @@
                 <div>
                     <p class="text-xs text-gray-500 mb-1">URL de Redireccionamiento</p>
                     <div class="flex items-center gap-2">
-                        <code class="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-mono text-gray-700 select-all">{{ url('/checkout/pagopar/retorno') }}</code>
-                        <button type="button" onclick="navigator.clipboard.writeText('{{ url('/checkout/pagopar/retorno') }}'); this.textContent='✓'; setTimeout(()=>this.textContent='Copiar',1500)"
+                        <code class="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-mono text-gray-700 select-all">{{ url('/checkout/pagopar/retorno') }}/$hash</code>
+                        <button type="button" onclick="navigator.clipboard.writeText('{{ url('/checkout/pagopar/retorno') }}/$hash'); this.textContent='✓'; setTimeout(()=>this.textContent='Copiar',1500)"
                                 class="shrink-0 text-xs px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Copiar</button>
                     </div>
                 </div>
