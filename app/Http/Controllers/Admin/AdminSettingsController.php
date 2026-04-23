@@ -82,7 +82,7 @@ class AdminSettingsController extends Controller
         // Simple format validation
         $valid = match($provider) {
             'bancard'   => strlen($setting->public_key ?? '') >= 20 && strlen($setting->private_key ?? '') >= 20,
-            'pagopar'   => strlen($setting->public_key ?? '') >= 10,
+            'pagopar'   => $this->validatePagopar($setting->public_key ?? '', $setting->private_key ?? ''),
             'coinspaid' => strlen($setting->public_key ?? '') >= 10,
             'coinbase'  => $this->validateCoinbase($setting->public_key ?? ''),
             default     => false,
@@ -92,6 +92,34 @@ class AdminSettingsController extends Controller
         $msg = $valid ? 'Credenciales válidas.' : 'Credenciales inválidas.';
 
         return back()->with($valid ? 'success' : 'error', $msg);
+    }
+
+    private function validatePagopar(string $publicKey, string $privateKey): bool
+    {
+        if (strlen($publicKey) < 10 || strlen($privateKey) < 10) return false;
+        try {
+            $token    = sha1($privateKey . 'CONSULTA');
+            $response = \Illuminate\Support\Facades\Http::timeout(10)
+                ->post('https://api.pagopar.com/api/pedidos/1.1/traer', [
+                    'hash_pedido'   => 'validacion_test',
+                    'token'         => $token,
+                    'token_publico' => $publicKey,
+                ]);
+            $data      = $response->json();
+            $resultado = strtolower((string) ($data['resultado'] ?? ''));
+
+            // Credenciales inválidas → Pagopar devuelve error de token/key
+            $credencialesInvalidas = str_contains($resultado, 'token') ||
+                                     str_contains($resultado, 'llave') ||
+                                     str_contains($resultado, 'clave') ||
+                                     str_contains($resultado, 'public_key') ||
+                                     str_contains($resultado, 'no autorizado');
+
+            // Si la respuesta tiene estructura JSON y NO es error de credenciales → válidas
+            return isset($data['respuesta']) && !$credencialesInvalidas;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function validateCoinbase(string $apiKey): bool
