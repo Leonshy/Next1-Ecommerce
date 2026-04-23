@@ -216,11 +216,9 @@ class CheckoutController extends Controller
         ]], 200);
     }
 
-    public function pagoparReturn(Request $request)
+    public function pagoparReturn(Request $request, string $hash)
     {
-        // Pagopar redirige con ?hash_pedido=xxx en la URL
-        $hash  = $request->query('hash_pedido');
-        $order = $hash ? Order::with('items')->where('pagopar_hash', $hash)->first() : null;
+        $order = Order::with('items')->where('pagopar_hash', $hash)->first();
 
         if (!$order) {
             Log::warning('Pagopar return: orden no encontrada', ['hash' => $hash]);

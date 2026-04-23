@@ -88,7 +88,7 @@ Route::post('/webhooks/pagopar', [CheckoutController::class, 'pagoparWebhook'])
     ->name('webhooks.pagopar')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
-Route::get('/checkout/pagopar/retorno', [CheckoutController::class, 'pagoparReturn'])
+Route::get('/checkout/pagopar/retorno/{hash}', [CheckoutController::class, 'pagoparReturn'])
     ->name('checkout.pagopar.return');
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
