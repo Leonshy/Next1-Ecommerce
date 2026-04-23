@@ -218,10 +218,15 @@ class AdminProductController extends Controller
                     ? Product::where('sku', $sku)->first()
                     : Product::where('slug', $slug)->first();
 
+                $shortDesc = trim($data['descripcion_corta'] ?? $data['short_description'] ?? '');
+                $longDesc  = trim($data['descripcion_larga'] ?? $data['long_description']  ?? '');
+
                 $productData = [
-                    'name'           => $name,
-                    'description'    => trim($data['descripcion'] ?? $data['description'] ?? '') ?: null,
-                    'price'          => $price,
+                    'name'              => $name,
+                    'description'       => trim($data['descripcion'] ?? $data['description'] ?? '') ?: null,
+                    'short_description' => $shortDesc !== '' ? mb_substr($shortDesc, 0, 250) : null,
+                    'long_description'  => $longDesc  !== '' ? $longDesc  : null,
+                    'price'             => $price,
                     'original_price' => $originalPrice !== '' ? (float) $originalPrice : null,
                     'stock'          => (int) ($data['stock'] ?? 0),
                     'category_id'    => $categoryId,
@@ -318,13 +323,15 @@ class AdminProductController extends Controller
             // BOM para Excel
             fputs($handle, "\xEF\xBB\xBF");
 
-            fputcsv($handle, ['nombre','slug','descripcion','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen']);
+            fputcsv($handle, ['nombre','slug','descripcion','descripcion_corta','descripcion_larga','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen']);
 
             foreach ($products as $p) {
                 fputcsv($handle, [
                     $p->name,
                     $p->slug,
-                    $p->description ?? '',
+                    $p->description       ?? '',
+                    $p->short_description ?? '',
+                    $p->long_description  ?? '',
                     $p->price,
                     $p->original_price ?? '',
                     $p->sku ?? '',
@@ -356,7 +363,7 @@ class AdminProductController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet()->setTitle('Productos');
 
-        $columns = ['nombre','slug','descripcion','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen'];
+        $columns = ['nombre','slug','descripcion','descripcion_corta','descripcion_larga','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen'];
 
         foreach ($columns as $i => $col) {
             $sheet->setCellValue(chr(65 + $i) . '1', $col);
@@ -375,7 +382,9 @@ class AdminProductController extends Controller
             $values = [
                 $p->name,
                 $p->slug,
-                $p->description ?? '',
+                $p->description       ?? '',
+                $p->short_description ?? '',
+                $p->long_description  ?? '',
                 $p->price,
                 $p->original_price ?? '',
                 $p->sku ?? '',
@@ -400,7 +409,8 @@ class AdminProductController extends Controller
             }
         }
 
-        $widths = [20,20,35,12,15,10,8,15,12,10,20,8,10,8,8,35];
+        // nombre,slug,descripcion,descripcion_corta,descripcion_larga,precio,precio_original,sku,stock,categoria,marca,badge,etiquetas,activo,destacado,nuevo,oferta,imagen
+        $widths = [20,20,35,30,50,12,15,10,8,15,12,10,20,8,10,8,8,35];
         foreach ($widths as $i => $w) {
             $sheet->getColumnDimension(chr(65 + $i))->setWidth($w);
         }
@@ -426,9 +436,11 @@ class AdminProductController extends Controller
         return response()->stream(function () use ($category, $brand) {
             $handle = fopen('php://output', 'w');
             fputs($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['nombre','slug','descripcion','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen']);
+            fputcsv($handle, ['nombre','slug','descripcion','descripcion_corta','descripcion_larga','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen']);
             fputcsv($handle, [
-                'Producto Ejemplo', 'producto-ejemplo', 'Descripción del producto',
+                'Producto Ejemplo', 'producto-ejemplo', '',
+                'Texto corto del producto (máx 250 caracteres)',
+                '<p>Descripción <strong>HTML</strong> larga del producto.</p>',
                 '100000', '120000', 'SKU001', '10',
                 $category, $brand, 'NUEVO', 'etiqueta1, etiqueta2',
                 'true', 'false', 'true', 'false', 'https://ejemplo.com/imagen.jpg',
@@ -445,9 +457,11 @@ class AdminProductController extends Controller
         $category = Category::active()->first()?->name ?? 'Electrónica';
         $brand    = Brand::active()->first()?->name    ?? 'Samsung';
 
-        $columns = ['nombre','slug','descripcion','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen'];
+        $columns = ['nombre','slug','descripcion','descripcion_corta','descripcion_larga','precio','precio_original','sku','stock','categoria','marca','badge','etiquetas','activo','destacado','nuevo','oferta','imagen'];
         $sample  = [
-            'Producto Ejemplo', 'producto-ejemplo', 'Descripción del producto',
+            'Producto Ejemplo', 'producto-ejemplo', '',
+            'Texto corto (máx 250 caracteres)',
+            '<p>Descripción <strong>HTML</strong> larga del producto.</p>',
             100000, 120000, 'SKU001', 10,
             $category, $brand, 'NUEVO', 'etiqueta1, etiqueta2',
             'true', 'false', 'true', 'false', 'https://ejemplo.com/imagen.jpg',
@@ -494,22 +508,24 @@ class AdminProductController extends Controller
 
         $guide = [
             ['Campo', 'Obligatorio', 'Descripción', 'Ejemplo'],
-            ['nombre',         'Sí',  'Nombre del producto',                      'Mouse Gamer Pro'],
-            ['slug',           'No',  'URL amigable (se genera si está vacío)',    'mouse-gamer-pro'],
-            ['descripcion',    'No',  'Descripción larga del producto',            'Descripción detallada...'],
-            ['precio',         'Sí',  'Precio de venta (sin puntos ni comas)',     '150000'],
-            ['precio_original','No',  'Precio antes del descuento',               '180000'],
-            ['sku',            'No',  'Código interno del producto',               'MG-001'],
-            ['stock',          'No',  'Cantidad disponible',                       '25'],
-            ['categoria',      'No',  'Nombre exacto de la categoría',             $category],
-            ['marca',          'No',  'Nombre exacto de la marca',                 $brand],
-            ['badge',          'No',  'Etiqueta visual (ej: NUEVO, OFERTA)',       'NUEVO'],
-            ['etiquetas',      'No',  'Tags separados por coma',                   'gaming, periférico'],
-            ['activo',         'No',  'true / false',                              'true'],
-            ['destacado',      'No',  'true / false',                              'false'],
-            ['nuevo',          'No',  'true / false',                              'true'],
-            ['oferta',         'No',  'true / false',                              'false'],
-            ['imagen',         'No',  'URL de la imagen principal',               'https://ejemplo.com/img.jpg'],
+            ['nombre',            'Sí',  'Nombre del producto',                              'Mouse Gamer Pro'],
+            ['slug',              'No',  'URL amigable (se genera si está vacío)',            'mouse-gamer-pro'],
+            ['descripcion',       'No',  'Descripción heredada (campo legacy, puede dejarse vacío)', ''],
+            ['descripcion_corta', 'No',  'Texto breve visible en ficha (máx 250 caracteres)', 'Mouse ergonómico con iluminación RGB'],
+            ['descripcion_larga', 'No',  'Descripción detallada con HTML (h2, p, ul, strong)', '<p>Descripción <strong>completa</strong></p>'],
+            ['precio',            'Sí',  'Precio de venta (sin puntos ni comas)',             '150000'],
+            ['precio_original',   'No',  'Precio antes del descuento',                        '180000'],
+            ['sku',               'No',  'Código interno del producto',                       'MG-001'],
+            ['stock',             'No',  'Cantidad disponible',                               '25'],
+            ['categoria',         'No',  'Nombre exacto de la categoría',                     $category],
+            ['marca',             'No',  'Nombre exacto de la marca',                         $brand],
+            ['badge',             'No',  'Etiqueta visual (ej: NUEVO, OFERTA)',               'NUEVO'],
+            ['etiquetas',         'No',  'Tags separados por coma',                           'gaming, periférico'],
+            ['activo',            'No',  'true / false',                                      'true'],
+            ['destacado',         'No',  'true / false',                                      'false'],
+            ['nuevo',             'No',  'true / false',                                      'true'],
+            ['oferta',            'No',  'true / false',                                      'false'],
+            ['imagen',            'No',  'URL de la imagen principal',                        'https://ejemplo.com/img.jpg'],
         ];
 
         foreach ($guide as $r => $row) {
@@ -528,8 +544,8 @@ class AdminProductController extends Controller
             $info->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // Anchos columnas hoja principal
-        $widths = [20,20,35,12,15,10,8,15,12,10,20,8,10,8,8,35];
+        // nombre,slug,descripcion,descripcion_corta,descripcion_larga,precio,precio_original,sku,stock,categoria,marca,badge,etiquetas,activo,destacado,nuevo,oferta,imagen
+        $widths = [20,20,35,30,50,12,15,10,8,15,12,10,20,8,10,8,8,35];
         foreach ($widths as $i => $w) {
             $sheet->getColumnDimension(chr(65 + $i))->setWidth($w);
         }
@@ -550,21 +566,23 @@ class AdminProductController extends Controller
     private function validateProduct(Request $request): array
     {
         $data = $request->validate([
-            'name'           => 'required|string|max:255',
-            'description'    => 'nullable|string',
-            'price'          => 'required|numeric|min:0',
-            'original_price' => 'nullable|numeric|min:0',
-            'stock'          => 'nullable|integer|min:0',
-            'sku'            => 'nullable|string|max:100',
-            'category_id'    => 'nullable|exists:categories,id',
-            'brand_id'       => 'nullable|exists:brands,id',
-            'badge'          => 'nullable|string|max:50',
-            'tags'           => 'nullable|array',
-            'tags.*'         => 'nullable|string|max:100',
-            'is_active'      => 'nullable|boolean',
-            'is_featured'    => 'nullable|boolean',
-            'is_new'         => 'nullable|boolean',
-            'is_hot_deal'    => 'nullable|boolean',
+            'name'              => 'required|string|max:255',
+            'short_description' => 'nullable|string|max:250',
+            'long_description'  => 'nullable|string',
+            'description'       => 'nullable|string',
+            'price'             => 'required|numeric|min:0',
+            'original_price'    => 'nullable|numeric|min:0',
+            'stock'             => 'nullable|integer|min:0',
+            'sku'               => 'nullable|string|max:100',
+            'category_id'       => 'nullable|exists:categories,id',
+            'brand_id'          => 'nullable|exists:brands,id',
+            'badge'             => 'nullable|string|max:50',
+            'tags'              => 'nullable|array',
+            'tags.*'            => 'nullable|string|max:100',
+            'is_active'         => 'nullable|boolean',
+            'is_featured'       => 'nullable|boolean',
+            'is_new'            => 'nullable|boolean',
+            'is_hot_deal'       => 'nullable|boolean',
         ]);
 
         // Checkboxes no enviados = false

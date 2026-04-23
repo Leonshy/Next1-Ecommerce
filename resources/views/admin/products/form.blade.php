@@ -64,10 +64,25 @@
                     </div>
                 </div>
 
+                {{-- Descripción corta --}}
+                <div x-data="{ len: {{ strlen(old('short_description', $product->short_description ?? '')) }} }">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-sm font-medium text-gray-700">Descripción corta <span class="text-gray-400 font-normal text-xs">(aparece en la ficha junto al precio)</span></label>
+                        <span class="text-xs" :class="len > 250 ? 'text-red-500 font-semibold' : 'text-gray-400'">
+                            <span x-text="len"></span>/250
+                        </span>
+                    </div>
+                    <textarea name="short_description" rows="3" maxlength="250"
+                              @input="len = $event.target.value.length"
+                              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4a6b]/30 focus:border-[#1a4a6b] resize-y">{{ old('short_description', $product->short_description ?? '') }}</textarea>
+                    @error('short_description')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+
+                {{-- Descripción larga --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
-                    <textarea name="description" rows="4"
-                              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4a6b]/30 focus:border-[#1a4a6b] resize-y">{{ old('description', $product->description ?? '') }}</textarea>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Descripción larga <span class="text-gray-400 font-normal text-xs">(se despliega con "Ver más" en la ficha pública)</span></label>
+                    <x-rich-editor name="long_description" :value="old('long_description', $product->long_description ?? '')" :rows="14" />
+                    @error('long_description')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div class="grid sm:grid-cols-3 gap-4">

@@ -13,10 +13,10 @@ class Product extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'name', 'slug', 'description', 'price', 'original_price',
-        'stock', 'sku', 'category_id', 'brand_id', 'images', 'tags',
-        'badge', 'is_active', 'is_featured', 'is_new', 'is_hot_deal',
-        'rating', 'reviews_count',
+        'name', 'slug', 'description', 'short_description', 'long_description',
+        'price', 'original_price', 'stock', 'sku', 'category_id', 'brand_id',
+        'images', 'tags', 'badge', 'is_active', 'is_featured', 'is_new',
+        'is_hot_deal', 'rating', 'reviews_count',
     ];
 
     protected $casts = [

@@ -67,23 +67,31 @@ class ProductController extends Controller
     public function show(string $slug)
     {
         $product = Product::active()->where('slug', $slug)->with(['category', 'brand', 'productImages'])->firstOrFail();
+
         $related = Product::active()
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
-            ->limit(4)
+            ->with(['mainImage'])
+            ->limit(5)
+            ->get();
+
+        $hotDeals = Product::active()->hotDeal()
+            ->where('id', '!=', $product->id)
+            ->with(['mainImage', 'category', 'brand'])
+            ->limit(8)
             ->get();
 
         $seoOverride = [
             'title'       => $product->name . ' — ' . (optional($product->brand)->name ?? config('app.name')),
-            'description' => $product->description
-                ? mb_substr(strip_tags($product->description), 0, 155) . '…'
+            'description' => ($product->short_description ?: $product->description)
+                ? mb_substr(strip_tags($product->short_description ?: $product->description), 0, 155) . '…'
                 : $product->name,
             'og_image'    => $product->mainImage?->image_url ?? '',
             'canonical'   => route('products.show', $product->slug),
             'og_type'     => 'product',
         ];
 
-        return view('products.show', compact('product', 'related', 'seoOverride') + ['seoPage' => 'products']);
+        return view('products.show', compact('product', 'related', 'hotDeals', 'seoOverride') + ['seoPage' => 'products']);
     }
 
     public function search(Request $request)

@@ -28,9 +28,7 @@
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Contenido</label>
-            <p class="text-xs text-gray-400 mb-2">Podés usar HTML básico: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt;</p>
-            <textarea name="content" rows="20"
-                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">{{ $record?->content ?? '' }}</textarea>
+            <x-rich-editor name="content" :value="$record?->content ?? ''" :rows="20" />
         </div>
 
         <div class="flex justify-end">
