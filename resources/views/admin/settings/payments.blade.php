@@ -61,6 +61,21 @@
                         <option value="production" {{ $settings[$key]->environment === 'production' ? 'selected' : '' }}>Producción</option>
                     </select>
                 </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Descuento por usar este medio de pago
+                        <span class="ml-1 text-xs text-gray-400 font-normal">( 0 = sin descuento )</span>
+                    </label>
+                    <div class="relative">
+                        <input type="number" name="discount_percentage" step="0.01" min="0" max="100"
+                               value="{{ number_format((float)$settings[$key]->discount_percentage, 2, '.', '') }}"
+                               placeholder="0.00"
+                               class="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">%</span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Se aplica al subtotal en el momento que el cliente selecciona este método.</p>
+                </div>
             </div>
 
             <div class="mt-4 flex items-center justify-end space-x-3">
@@ -117,6 +132,7 @@
             </div>
         </div>
 
+        @php $transferPaymentSetting = \App\Models\PaymentSetting::firstOrCreate(['provider' => 'transferencia']); @endphp
         <form method="POST" action="{{ route('admin.settings.payments.update', 'transferencia') }}">
             @csrf
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -149,6 +165,20 @@
                     <input type="text" name="extra" value="{{ $transferSettings['extra'] ?? '' }}"
                            placeholder="ej: Referencia: número de pedido"
                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Descuento por usar este medio de pago
+                        <span class="ml-1 text-xs text-gray-400 font-normal">( 0 = sin descuento )</span>
+                    </label>
+                    <div class="relative">
+                        <input type="number" name="discount_percentage" step="0.01" min="0" max="100"
+                               value="{{ number_format((float)$transferPaymentSetting->discount_percentage, 2, '.', '') }}"
+                               placeholder="0.00"
+                               class="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">%</span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Se aplica al subtotal en el momento que el cliente selecciona este método.</p>
                 </div>
             </div>
             <div class="mt-4 flex justify-end">

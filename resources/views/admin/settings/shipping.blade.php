@@ -10,7 +10,7 @@
 <div class="max-w-4xl space-y-6">
 
     <form method="POST" action="{{ route('admin.settings.shipping.update') }}"
-          x-data="shippingZonesEditor({{ json_encode($allDepts) }}, {{ json_encode($savedZones) }})"
+          x-data="shippingZonesEditor({{ json_encode($allDepts) }}, {{ json_encode($savedZones) }}, {{ $settings->envio_propio_enabled ? 'true' : 'false' }})"
           x-on:submit="onSubmit">
         @csrf @method('PUT')
 
@@ -58,7 +58,7 @@
                 </label>
             </div>
 
-            {{-- Envío propio --}}
+            {{-- Envío propio — conectado a Alpine --}}
             <div class="flex items-start justify-between pt-4 border-t border-gray-100">
                 <div>
                     <p class="text-sm font-medium text-gray-800">Envío propio</p>
@@ -67,14 +67,22 @@
                 <label class="relative inline-flex items-center cursor-pointer">
                     <input type="hidden" name="envio_propio_enabled" value="0">
                     <input type="checkbox" name="envio_propio_enabled" value="1" class="sr-only peer"
-                           {{ $settings->envio_propio_enabled ? 'checked' : '' }}>
+                           x-model="envioPropio"
+                           :checked="envioPropio">
                     <div class="w-11 h-6 bg-gray-200 peer-checked:bg-blue-600 rounded-full peer after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
                 </label>
             </div>
         </div>
 
-        {{-- ── Zonas de Envío ────────────────────────────────────────────────── --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
+        {{-- ── Zonas de Envío (visible solo si envío propio está activo) ────── --}}
+        <div x-show="envioPropio"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-1"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-1"
+             class="bg-white rounded-xl border border-gray-200 p-6">
             <div class="flex items-start justify-between border-b border-gray-100 pb-4 mb-5">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">Zonas de Envío — Paraguay</h2>
@@ -101,7 +109,7 @@
                 <span>
                     <strong>¿Cómo funciona?</strong> Habilitá un departamento y configurá su tarifa base.
                     Si alguna ciudad tiene un precio diferente, agregá una <strong>Tarifa Personalizada</strong>.
-                    Los distritos sin tarifa personalizada usan la tarifa del departamento.
+                    Podés <strong>deshabilitar ciudades</strong> para que no aparezcan en el checkout.
                     Los departamentos inactivos aparecen deshabilitados en el checkout.
                 </span>
             </div>
@@ -130,7 +138,8 @@
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-semibold text-gray-900" x-text="zone.name"></p>
                                 <p class="text-xs text-gray-500">
-                                    <span x-text="zone.districts.length"></span> distritos
+                                    <span x-text="getActiveCities(zIdx).length"></span> /
+                                    <span x-text="zone.districts.length"></span> ciudades activas
                                     <template x-if="zone.customRates.length > 0">
                                         <span class="text-blue-600 ml-1">
                                             · <span x-text="zone.customRates.length"></span>
@@ -168,7 +177,41 @@
                         {{-- Contenido expandible --}}
                         <div x-show="zone.open" class="border-t border-gray-100 p-4 space-y-4 bg-white">
 
-                            {{-- Tarifa base del departamento --}}
+                            {{-- ── Ciudades habilitadas / deshabilitadas ── --}}
+                            <div class="border border-gray-200 rounded-xl overflow-hidden">
+                                <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                                    <p class="text-sm font-semibold text-gray-700">Ciudades / Distritos</p>
+                                    <div class="flex items-center gap-3 text-xs text-gray-500">
+                                        <span>
+                                            <span x-text="getActiveCities(zIdx).length" class="font-medium text-green-700"></span>
+                                            activas ·
+                                            <span x-text="zone.inactiveCities.length" class="font-medium text-red-500"></span>
+                                            deshabilitadas
+                                        </span>
+                                        <button type="button" @click="enableAllCities(zIdx)"
+                                                class="text-blue-600 hover:underline">Habilitar todas</button>
+                                    </div>
+                                </div>
+                                <div class="p-3 grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-48 overflow-y-auto">
+                                    <template x-for="city in zone.districts" :key="city">
+                                        <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-50 select-none"
+                                               :class="isCityActive(zIdx, city) ? '' : 'opacity-60'">
+                                            <button type="button"
+                                                    @click="toggleCity(zIdx, city)"
+                                                    :class="isCityActive(zIdx, city) ? 'bg-green-500' : 'bg-gray-300'"
+                                                    class="relative inline-flex w-8 h-4 rounded-full transition-colors shrink-0 focus:outline-none">
+                                                <span :class="isCityActive(zIdx, city) ? 'translate-x-4' : 'translate-x-0.5'"
+                                                      class="inline-block w-3 h-3 mt-0.5 bg-white rounded-full shadow transition-transform"></span>
+                                            </button>
+                                            <span class="text-xs truncate"
+                                                  :class="isCityActive(zIdx, city) ? 'text-gray-800' : 'text-gray-400 line-through'"
+                                                  x-text="city"></span>
+                                        </label>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- ── Tarifa base del departamento ── --}}
                             <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
                                 <p class="text-sm font-semibold text-blue-900 flex items-center gap-1.5">
                                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,14 +233,12 @@
                                     </div>
                                 </div>
 
-                                {{-- Envío gratis --}}
                                 <label class="flex items-center gap-2 cursor-pointer select-none">
                                     <input type="checkbox" x-model="zone.freeShippingEligible"
                                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                     <span class="text-xs text-gray-700">Aplica envío gratis por monto mínimo</span>
                                 </label>
 
-                                {{-- Distritos con tarifa base --}}
                                 <div x-show="getDistrictsWithDefaultRate(zIdx).length > 0">
                                     <p class="text-xs text-gray-500 mb-1">Aplica a:</p>
                                     <div class="flex flex-wrap gap-1">
@@ -208,7 +249,7 @@
                                 </div>
                             </div>
 
-                            {{-- Tarifas personalizadas --}}
+                            {{-- ── Tarifas personalizadas ── --}}
                             <template x-if="zone.customRates.length > 0">
                                 <div class="space-y-3">
                                     <p class="text-sm font-semibold text-gray-700">Tarifas Personalizadas por Área</p>
@@ -240,13 +281,14 @@
                                                 </div>
                                             </div>
 
-                                            {{-- Selector de distritos --}}
+                                            {{-- Selector de distritos (solo ciudades activas) --}}
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">
                                                     Ciudades / Distritos con esta tarifa
+                                                    <span class="text-gray-400 font-normal">(solo ciudades habilitadas)</span>
                                                 </label>
                                                 <div class="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                    <template x-for="district in zone.districts" :key="district">
+                                                    <template x-for="district in getActiveCities(zIdx)" :key="district">
                                                         <label :class="isDistrictInOtherRate(zIdx, rIdx, district) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-blue-50 rounded'"
                                                                class="flex items-center gap-1.5 px-1.5 py-1 text-xs select-none">
                                                             <input type="checkbox"
@@ -268,7 +310,7 @@
                             </template>
 
                             {{-- Botón agregar tarifa personalizada --}}
-                            <template x-if="zone.districts.length > 1">
+                            <template x-if="getActiveCities(zIdx).length > 1">
                                 <button type="button" @click="addCustomRate(zIdx)"
                                         class="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-blue-300 rounded-xl text-sm text-blue-600 hover:bg-blue-50 transition-colors font-medium">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -330,17 +372,18 @@
 </div>
 
 <script>
-function shippingZonesEditor(allDepts, savedZones) {
+function shippingZonesEditor(allDepts, savedZones, envioPropio) {
     const initZones = allDepts.map(dept => {
         const saved = savedZones.find(z => z.departmentId === dept.id) || {};
         return {
             departmentId: dept.id,
             name:         dept.name,
             districts:    dept.districts,
-            active:            saved.active            ?? false,
-            price:             saved.price             ?? 0,
-            deliveryTime:      saved.deliveryTime      ?? '',
+            active:               saved.active               ?? false,
+            price:                saved.price                ?? 0,
+            deliveryTime:         saved.deliveryTime         ?? '',
             freeShippingEligible: saved.freeShippingEligible ?? true,
+            inactiveCities:       saved.inactiveCities       ?? [],
             customRates: (saved.customRates || []).map(r => ({
                 id:           r.id || Math.random().toString(36).slice(2, 11),
                 price:        r.price        ?? 0,
@@ -353,6 +396,7 @@ function shippingZonesEditor(allDepts, savedZones) {
 
     return {
         zones: initZones,
+        envioPropio: envioPropio,
 
         activeDeptCount() {
             return this.zones.filter(z => z.active).length;
@@ -361,6 +405,38 @@ function shippingZonesEditor(allDepts, savedZones) {
         totalCustomRatesCount() {
             return this.zones.reduce((sum, z) => sum + z.customRates.length, 0);
         },
+
+        // ── Ciudades ──────────────────────────────────────────────────────────
+
+        isCityActive(zIdx, city) {
+            return !this.zones[zIdx].inactiveCities.includes(city);
+        },
+
+        toggleCity(zIdx, city) {
+            const zone = this.zones[zIdx];
+            const idx  = zone.inactiveCities.indexOf(city);
+            if (idx === -1) {
+                zone.inactiveCities.push(city);
+                // Quitar la ciudad de todas las tarifas personalizadas si estaba ahí
+                zone.customRates.forEach(r => {
+                    const di = r.districtIds.indexOf(city);
+                    if (di !== -1) r.districtIds.splice(di, 1);
+                });
+            } else {
+                zone.inactiveCities.splice(idx, 1);
+            }
+        },
+
+        enableAllCities(zIdx) {
+            this.zones[zIdx].inactiveCities = [];
+        },
+
+        getActiveCities(zIdx) {
+            const zone = this.zones[zIdx];
+            return zone.districts.filter(d => !zone.inactiveCities.includes(d));
+        },
+
+        // ── Tarifas personalizadas ────────────────────────────────────────────
 
         addCustomRate(zIdx) {
             this.zones[zIdx].customRates.push({
@@ -389,9 +465,10 @@ function shippingZonesEditor(allDepts, savedZones) {
         },
 
         getDistrictsWithDefaultRate(zIdx) {
-            const zone       = this.zones[zIdx];
+            const zone        = this.zones[zIdx];
             const allInCustom = zone.customRates.flatMap(r => r.districtIds);
-            return zone.districts.filter(d => !allInCustom.includes(d));
+            // Solo muestra ciudades activas que no tienen tarifa personalizada
+            return this.getActiveCities(zIdx).filter(d => !allInCustom.includes(d));
         },
 
         getSerializedZones() {

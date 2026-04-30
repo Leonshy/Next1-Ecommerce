@@ -15,13 +15,14 @@ class PaymentSetting extends Model
     protected $fillable = [
         'provider', 'is_enabled', 'is_validated',
         'public_key', 'private_key', 'webhook_secret',
-        'environment', 'settings',
+        'environment', 'settings', 'discount_percentage',
     ];
 
     protected $casts = [
-        'is_enabled'   => 'boolean',
-        'is_validated' => 'boolean',
-        'settings'     => 'array',
+        'is_enabled'          => 'boolean',
+        'is_validated'        => 'boolean',
+        'settings'            => 'array',
+        'discount_percentage' => 'decimal:2',
     ];
 
     public static function getProvider(string $provider): ?self

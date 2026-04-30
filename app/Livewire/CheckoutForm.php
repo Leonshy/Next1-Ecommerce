@@ -32,10 +32,12 @@ class CheckoutForm extends Component
     public string $deliveryTime      = '';
 
     // Payment
-    public string $paymentMethod    = 'bancard';
-    public string $giftCardCode     = '';
-    public float  $giftCardDiscount = 0;
-    public string $notes            = '';
+    public string $paymentMethod        = 'bancard';
+    public string $giftCardCode         = '';
+    public float  $giftCardDiscount     = 0;
+    public float  $paymentDiscount      = 0;
+    public float  $paymentDiscountPct   = 0;
+    public string $notes                = '';
     public        $transferReceipt  = null; // archivo comprobante
 
     // Addresses
@@ -94,6 +96,8 @@ class CheckoutForm extends Component
         if ($available && !array_key_exists($this->paymentMethod, $available)) {
             $this->paymentMethod = array_key_first($available);
         }
+
+        $this->calculatePaymentDiscount();
     }
 
     public function selectAddress(string $addressId): void
@@ -220,6 +224,27 @@ class CheckoutForm extends Component
     public function updatedShippingCity(): void
     {
         $this->calculateShipping();
+    }
+
+    public function updatedPaymentMethod(): void
+    {
+        $this->calculatePaymentDiscount();
+    }
+
+    private function calculatePaymentDiscount(): void
+    {
+        $setting = \App\Models\PaymentSetting::where('provider', $this->paymentMethod)->first();
+        $pct     = $setting ? (float) $setting->discount_percentage : 0.0;
+
+        if ($pct > 0) {
+            $cart     = $this->getCart();
+            $subtotal = array_reduce($cart, fn($c, $i) => $c + ($i['price'] * $i['quantity']), 0.0);
+            $this->paymentDiscountPct = $pct;
+            $this->paymentDiscount    = round($subtotal * $pct / 100);
+        } else {
+            $this->paymentDiscountPct = 0;
+            $this->paymentDiscount    = 0;
+        }
     }
 
     public function updatedEditDepartment(): void
@@ -366,8 +391,13 @@ class CheckoutForm extends Component
                 }
             }
 
+            // Descuento por medio de pago (recalculado en el momento del pedido)
+            $paymentSetting  = \App\Models\PaymentSetting::where('provider', $this->paymentMethod)->first();
+            $paymentPct      = $paymentSetting ? (float) $paymentSetting->discount_percentage : 0.0;
+            $paymentDiscount = $paymentPct > 0 ? round($subtotal * $paymentPct / 100) : 0;
+
             $shippingCost = $this->shippingMethod === 'pickup' ? 0 : $this->shippingCost;
-            $total        = max(0, $subtotal - $discount + $shippingCost);
+            $total        = max(0, $subtotal - $discount - $paymentDiscount + $shippingCost);
 
             // Estado según método de pago
             $status = $this->paymentMethod === 'transferencia' ? 'pendiente_transferencia' : 'pendiente';
@@ -390,6 +420,7 @@ class CheckoutForm extends Component
                 'shipping_city'    => $this->shippingCity,
                 'subtotal'         => $subtotal,
                 'discount'         => $discount,
+                'payment_discount' => $paymentDiscount,
                 'shipping_cost'    => $shippingCost,
                 'total'            => $total,
                 'notes'            => $this->notes,
@@ -493,7 +524,7 @@ class CheckoutForm extends Component
     {
         $cart     = $this->getCart();
         $subtotal = array_reduce($cart, fn($c, $i) => $c + ($i['price'] * $i['quantity']), 0.0);
-        $total    = max(0, $subtotal - $this->giftCardDiscount + $this->shippingCost);
+        $total    = max(0, $subtotal - $this->giftCardDiscount - $this->paymentDiscount + $this->shippingCost);
 
         $shippingSettings    = ShippingSetting::getDefault();
         $availablePayments   = $this->availablePaymentMethods();

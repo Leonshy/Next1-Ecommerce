@@ -410,13 +410,22 @@
             {{-- Métodos de pago disponibles (dinámico según config admin) --}}
             @forelse($availablePayments as $key => $label)
                 @php
-                    $icons = ['bancard' => '💳', 'transferencia' => '🏦', 'pagopar' => '🔵'];
-                    $subs  = ['bancard' => 'Visa, Mastercard', 'transferencia' => 'Subí tu comprobante al finalizar', 'pagopar' => 'Tarjeta, Tigo Money, QR'];
+                    $icons        = ['bancard' => '💳', 'transferencia' => '🏦', 'pagopar' => '🔵'];
+                    $subs         = ['bancard' => 'Visa, Mastercard', 'transferencia' => 'Subí tu comprobante al finalizar', 'pagopar' => 'Tarjeta, Tigo Money, QR'];
+                    $pmSetting    = \App\Models\PaymentSetting::where('provider', $key)->first();
+                    $pmDiscount   = $pmSetting ? (float) $pmSetting->discount_percentage : 0;
                 @endphp
                 <label class="flex items-center space-x-3 p-4 border rounded-xl cursor-pointer {{ $paymentMethod === $key ? 'border-blue-600 bg-blue-50' : 'border-gray-200' }}">
                     <input type="radio" wire:model.live="paymentMethod" value="{{ $key }}" class="text-blue-600">
-                    <div>
-                        <p class="font-medium text-sm">{{ $icons[$key] ?? '💰' }} {{ $label }}</p>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <p class="font-medium text-sm">{{ $icons[$key] ?? '💰' }} {{ $label }}</p>
+                            @if($pmDiscount > 0)
+                                <span class="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">
+                                    {{ number_format($pmDiscount, 0) }}% OFF
+                                </span>
+                            @endif
+                        </div>
                         <p class="text-xs text-gray-500">{{ $subs[$key] ?? '' }}</p>
                     </div>
                 </label>
@@ -501,12 +510,59 @@
                 @endforeach
             </div>
 
+            {{-- Banner de envío gratis --}}
+            @if($shippingSettings->free_shipping_enabled && $shippingMethod !== 'pickup')
+                @php
+                    $freeMin      = (float) $shippingSettings->free_shipping_min_amount;
+                    $freeRemaining = max(0, $freeMin - $subtotal);
+                    $freeProgress  = $freeMin > 0 ? min(100, ($subtotal / $freeMin) * 100) : 100;
+                @endphp
+                @if($freeRemaining > 0)
+                <div class="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <span class="text-base">🚚</span>
+                        <p class="text-xs font-semibold text-amber-800">
+                            ¡Faltan <span class="text-amber-600">Gs. {{ number_format($freeRemaining, 0, ',', '.') }}</span> para envío gratis!
+                        </p>
+                    </div>
+                    <div class="w-full bg-amber-200 rounded-full h-1.5">
+                        <div class="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+                             style="width: {{ number_format($freeProgress, 1, '.', '') }}%"></div>
+                    </div>
+                </div>
+                @else
+                <div class="mb-4 bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
+                    <span class="text-base">🎉</span>
+                    <p class="text-xs font-semibold text-green-700">¡Tenés envío gratis en este pedido!</p>
+                </div>
+                @endif
+            @endif
+
             <div class="space-y-2 text-sm border-t pt-3">
                 <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span>Gs. {{ number_format($subtotal, 0, ',', '.') }}</span></div>
-                <div class="flex justify-between"><span class="text-gray-500">Envío</span><span>{{ $shippingCost > 0 ? 'Gs. ' . number_format($shippingCost, 0, ',', '.') : 'Gratis' }}</span></div>
+
                 @if($giftCardDiscount > 0)
-                    <div class="flex justify-between text-green-600"><span>Gift Card</span><span>-Gs. {{ number_format($giftCardDiscount, 0, ',', '.') }}</span></div>
+                    <div class="flex justify-between text-green-600">
+                        <span class="flex items-center gap-1">🎁 Descuento Gift Card</span>
+                        <span>-Gs. {{ number_format($giftCardDiscount, 0, ',', '.') }}</span>
+                    </div>
                 @endif
+
+                @if($paymentDiscount > 0)
+                    <div class="flex justify-between text-green-600">
+                        <span class="flex items-center gap-1">
+                            💳 Descuento por pago
+                            <span class="text-xs bg-green-100 text-green-700 font-semibold px-1.5 py-0.5 rounded-full">{{ number_format($paymentDiscountPct, 0) }}%</span>
+                        </span>
+                        <span>-Gs. {{ number_format($paymentDiscount, 0, ',', '.') }}</span>
+                    </div>
+                @endif
+
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Envío</span>
+                    <span>{{ $shippingCost > 0 ? 'Gs. ' . number_format($shippingCost, 0, ',', '.') : 'Gratis' }}</span>
+                </div>
+
                 <div class="flex justify-between font-bold text-base border-t pt-2">
                     <span>Total</span>
                     <span>Gs. {{ number_format($total, 0, ',', '.') }}</span>

@@ -16,7 +16,7 @@ class Order extends Model
     protected $fillable = [
         'order_number', 'user_id', 'status', 'customer_name', 'customer_email',
         'customer_phone', 'shipping_address', 'shipping_city', 'subtotal',
-        'discount', 'shipping_cost', 'total', 'notes', 'bancard_process_id',
+        'discount', 'payment_discount', 'shipping_cost', 'total', 'notes', 'bancard_process_id',
         'pagopar_hash', 'pagopar_order_id',
         'guest_access_token', 'payment_method', 'transfer_receipt',
     ];
@@ -24,6 +24,7 @@ class Order extends Model
     protected $casts = [
         'subtotal'         => 'decimal:2',
         'discount'         => 'decimal:2',
+        'payment_discount' => 'decimal:2',
         'shipping_cost'    => 'decimal:2',
         'total'            => 'decimal:2',
         'customer_phone'   => 'encrypted',

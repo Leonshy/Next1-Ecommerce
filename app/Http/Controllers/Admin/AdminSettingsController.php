@@ -66,11 +66,13 @@ class AdminSettingsController extends Controller
                 ['key' => 'transfer_settings'],
                 ['metadata' => $request->only(['bank', 'account_name', 'account_number', 'ruc', 'extra'])]
             );
+            $transfer = PaymentSetting::firstOrCreate(['provider' => 'transferencia']);
+            $transfer->update(['discount_percentage' => (float) $request->input('discount_percentage', 0)]);
             return back()->with('success', 'Datos de transferencia actualizados.');
         }
 
         $setting = PaymentSetting::firstOrCreate(['provider' => $provider]);
-        $setting->update($request->only(['public_key', 'private_key', 'webhook_secret', 'environment', 'is_enabled']));
+        $setting->update($request->only(['public_key', 'private_key', 'webhook_secret', 'environment', 'is_enabled', 'discount_percentage']));
         return back()->with('success', 'Configuración de ' . $provider . ' actualizada.');
     }
 

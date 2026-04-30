@@ -50,6 +50,12 @@ class ShippingSetting extends Model
             $baseDelivery     = $zone['deliveryTime'] ?? '';
             $baseFreeEligible = (bool) ($zone['freeShippingEligible'] ?? $zone['freeShippingEnabled'] ?? true);
 
+            // Ciudad deshabilitada → no disponible
+            $inactiveCities = array_map('strtolower', $zone['inactiveCities'] ?? []);
+            if (in_array(strtolower($city), $inactiveCities)) {
+                return ['cost' => 0, 'delivery_time' => '', 'free' => false, 'unavailable' => true];
+            }
+
             // Verifica tarifas personalizadas primero
             foreach ($zone['customRates'] ?? [] as $rate) {
                 // Soporta districtIds (nuevo) y areas (viejo)
