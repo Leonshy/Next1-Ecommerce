@@ -190,6 +190,12 @@ class CheckoutController extends Controller
         $cancelado  = (bool) ($resultado['cancelado']        ?? false);
         $nroPedido  = $resultado['numero_comprobante_interno'] ?? $resultado['numero_pedido'] ?? null;
 
+        // Consultar estado en la API de Pagopar (requerido para certificación Paso 3)
+        if ($hashPedido) {
+            $consulta = $service->queryOrder($hashPedido);
+            Log::info('Pagopar webhook: consulta de estado', ['hash' => $hashPedido, 'resultado' => $consulta]);
+        }
+
         $order = Order::where('pagopar_hash', $hashPedido)->first();
 
         if ($order) {
