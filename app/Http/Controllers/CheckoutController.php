@@ -208,12 +208,8 @@ class CheckoutController extends Controller
             Log::warning('Pagopar webhook: orden no encontrada', ['hash' => $hashPedido]);
         }
 
-        // Respuesta requerida por Pagopar
-        return response()->json([[
-            'pagado'        => $pagado,
-            'hash_pedido'   => $hashPedido,
-            'numero_pedido' => $nroPedido,
-        ]], 200);
+        // Respuesta requerida por Pagopar — devolver exactamente el resultado recibido
+        return response()->json($payload['resultado'], 200);
     }
 
     public function pagoparReturn(Request $request, string $hash)
