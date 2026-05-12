@@ -34,9 +34,7 @@
 
             {{-- Miniaturas: fila horizontal con scroll en mobile, columna en md+ --}}
             @if($hasGallery)
-            <div class="flex flex-row gap-2 overflow-x-auto pb-1
-                        md:flex-col md:overflow-x-visible md:pb-0 md:max-h-[420px] md:overflow-y-auto
-                        flex-shrink-0">
+            <div class="flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:overflow-x-visible pb-1 md:pb-0 md:max-h-[420px] flex-shrink-0">
                 @foreach($product->productImages as $img)
                     <button @click="activeImg = '{{ $img->image_url }}'"
                             class="w-14 h-14 flex-shrink-0 overflow-hidden border-2 rounded transition-colors"
