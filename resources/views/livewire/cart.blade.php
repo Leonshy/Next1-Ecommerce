@@ -43,6 +43,9 @@
                     @endif
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-gray-900 truncate">{{ $item['name'] }}</p>
+                        @if(!empty($item['original_price']) && $item['original_price'] > $item['price'])
+                            <p class="text-xs text-gray-400 line-through">Gs. {{ number_format($item['original_price'], 0, ',', '.') }}</p>
+                        @endif
                         <p class="text-sm text-blue-600 font-semibold">Gs. {{ number_format($item['price'], 0, ',', '.') }}</p>
                         <div class="flex items-center gap-2 mt-1">
                             <button wire:click="updateQuantity('{{ $key }}', {{ $item['quantity'] - 1 }})"

@@ -522,7 +522,21 @@ class CheckoutForm extends Component
 
     public function render()
     {
-        $cart     = $this->getCart();
+        $cart = $this->getCart();
+
+        // Enriquecer con original_price si no está guardado en el item
+        $productIds = array_filter(array_column(array_values($cart), 'id'));
+        if ($productIds) {
+            $originals = \App\Models\Product::whereIn('id', $productIds)
+                ->pluck('original_price', 'id');
+            $cart = array_map(function ($item) use ($originals) {
+                if (!isset($item['original_price'])) {
+                    $item['original_price'] = $originals[$item['id']] ?? null;
+                }
+                return $item;
+            }, $cart);
+        }
+
         $subtotal = array_reduce($cart, fn($c, $i) => $c + ($i['price'] * $i['quantity']), 0.0);
         $total    = max(0, $subtotal - $this->giftCardDiscount - $this->paymentDiscount + $this->shippingCost);
 

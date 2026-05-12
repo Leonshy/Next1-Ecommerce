@@ -25,12 +25,13 @@ class Cart extends Component
             $this->items[$productId]['quantity'] += $quantity;
         } else {
             $this->items[$productId] = [
-                'id'       => $product->id,
-                'name'     => $product->name,
-                'price'    => (float) $product->price,
-                'image'    => $product->mainImage?->image_url,
-                'slug'     => $product->slug,
-                'quantity' => $quantity,
+                'id'             => $product->id,
+                'name'           => $product->name,
+                'price'          => (float) $product->price,
+                'original_price' => $product->original_price ? (float) $product->original_price : null,
+                'image'          => $product->mainImage?->image_url,
+                'slug'           => $product->slug,
+                'quantity'       => $quantity,
             ];
         }
 
@@ -82,20 +83,35 @@ class Cart extends Component
         if (Auth::check()) {
             $dbCart = CartModel::where('user_id', Auth::id())->first();
 
-            // Si hay items en sesión (compras como invitado), fusionar con el carrito de DB
             $sessionItems = session('cart', []);
             if (!empty($sessionItems)) {
                 $dbItems = $dbCart?->items ?? [];
                 $merged  = $this->mergeItems($dbItems, $sessionItems);
                 session()->forget('cart');
                 $this->saveToDb($merged);
-                return $merged;
+                return $this->enrichWithOriginalPrice($merged);
             }
 
-            return $dbCart?->items ?? [];
+            return $this->enrichWithOriginalPrice($dbCart?->items ?? []);
         }
 
-        return session('cart', []);
+        return $this->enrichWithOriginalPrice(session('cart', []));
+    }
+
+    private function enrichWithOriginalPrice(array $items): array
+    {
+        if (empty($items)) return $items;
+
+        $ids = array_filter(array_column(array_values($items), 'id'));
+        $originals = Product::whereIn('id', $ids)->pluck('original_price', 'id');
+
+        return array_map(function ($item) use ($originals) {
+            if (!array_key_exists('original_price', $item)) {
+                $op = $originals[$item['id']] ?? null;
+                $item['original_price'] = $op ? (float) $op : null;
+            }
+            return $item;
+        }, $items);
     }
 
     private function persist(): void

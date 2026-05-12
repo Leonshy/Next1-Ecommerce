@@ -505,7 +505,12 @@
                             <p class="text-xs font-medium text-gray-900 truncate">{{ $item['name'] }}</p>
                             <p class="text-xs text-gray-400">x{{ $item['quantity'] }}</p>
                         </div>
-                        <p class="text-xs font-semibold">Gs. {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}</p>
+                        <div class="text-right">
+                            @if(!empty($item['original_price']) && $item['original_price'] > $item['price'])
+                                <p class="text-xs text-gray-400 line-through">Gs. {{ number_format($item['original_price'] * $item['quantity'], 0, ',', '.') }}</p>
+                            @endif
+                            <p class="text-xs font-semibold">Gs. {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}</p>
+                        </div>
                     </div>
                 @endforeach
             </div>
