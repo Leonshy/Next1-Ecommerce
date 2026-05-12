@@ -15,7 +15,7 @@ class Campaign extends Model
 
     protected $fillable = [
         'name', 'tag', 'filter_type', 'category_id', 'brand_id',
-        'description', 'banner_image',
+        'description', 'banner_image', 'badge_color',
         'start_date', 'end_date', 'display_on_home', 'display_order', 'is_active',
     ];
 

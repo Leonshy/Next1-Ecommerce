@@ -239,6 +239,9 @@ function openEdit(id, data) {
     set('display_order', data.display_order);
     set('display_on_home', data.display_on_home);
     set('is_active',     data.is_active);
+    window.dispatchEvent(new CustomEvent('campaign-set-badge-color', {
+        detail: { value: data.badge_color ?? '#dc2626' }
+    }));
 
     // Actualizar el tipo de filtro en Alpine
     window.dispatchEvent(new CustomEvent('campaign-set-filter', {

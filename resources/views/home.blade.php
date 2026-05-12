@@ -94,8 +94,11 @@
                                             @endif
                                             @if($slide->button_text && $slide->button_link)
                                                 <a href="{{ $slide->button_link }}"
-                                                   class="inline-block bg-secondary text-white px-4 py-2 sm:px-8 sm:py-3 text-sm sm:text-base font-semibold hover:opacity-90 transition-opacity">
+                                                   class="inline-flex items-center gap-1 text-sm sm:text-base font-semibold text-white border border-white/40 px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg hover:bg-white hover:text-gray-900 transition-colors w-fit">
                                                     {{ $slide->button_text }}
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                    </svg>
                                                 </a>
                                             @endif
                                         </div>
@@ -463,7 +466,7 @@
                 <div class="col-span-12 lg:col-span-3 flex flex-col">
                     <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"
                        class="relative flex flex-col flex-1 rounded-xl overflow-hidden group min-h-[180px] sm:min-h-[260px] md:min-h-[320px]"
-                       style="background: linear-gradient(135deg, #1a3a5c 0%, #0f2035 100%)"
+                       style="background: linear-gradient(135deg, #1a3a5c 0%, #0f2035 100%)">
                         @if($campaign->banner_image)
                             <img src="{{ $campaign->banner_image }}"
                                  alt="{{ $campaign->name }}"
@@ -491,10 +494,12 @@
                     {{-- Header --}}
                     <div class="flex items-center justify-between mb-6 border-b-2 border-border">
                         <div class="flex items-center">
-                            <h2 class="bg-destructive text-white font-bold text-sm uppercase px-6 py-3 relative">
+                            @php $badgeColor = $campaign->badge_color ?: '#dc2626'; @endphp
+                            <h2 class="text-white font-bold text-sm uppercase px-6 py-3 relative"
+                                style="background-color: {{ $badgeColor }}">
                                 {{ strtoupper($campaign->name) }}
-                                <span class="absolute -right-3 top-0 h-full w-3 bg-destructive"
-                                      style="clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
+                                <span class="absolute -right-3 top-0 h-full w-3"
+                                      style="background-color: {{ $badgeColor }}; clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
                             </h2>
                         </div>
                         <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"

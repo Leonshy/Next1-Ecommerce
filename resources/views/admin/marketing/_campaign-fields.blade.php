@@ -231,6 +231,12 @@
     </div>
 </div>
 
+<x-admin.color-picker
+    name="badge_color"
+    label="Color del título"
+    :value="old('badge_color', '#dc2626')"
+    :listen-event="$e ? 'campaign-set-badge-color' : null" />
+
 {{-- Fechas + Orden --}}
 <div class="grid grid-cols-3 gap-3">
     <div>
