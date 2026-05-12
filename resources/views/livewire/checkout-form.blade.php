@@ -543,17 +543,14 @@
 
                 @if($giftCardDiscount > 0)
                     <div class="flex justify-between text-green-600">
-                        <span class="flex items-center gap-1">🎁 Descuento Gift Card</span>
+                        <span class="text-gray-500">Descuento Gift Card</span>
                         <span>-Gs. {{ number_format($giftCardDiscount, 0, ',', '.') }}</span>
                     </div>
                 @endif
 
                 @if($paymentDiscount > 0)
                     <div class="flex justify-between text-green-600">
-                        <span class="flex items-center gap-1">
-                            💳 Descuento por pago
-                            <span class="text-xs bg-green-100 text-green-700 font-semibold px-1.5 py-0.5 rounded-full">{{ number_format($paymentDiscountPct, 0) }}%</span>
-                        </span>
+                        <span class="text-gray-500">Descuento por pago ({{ number_format($paymentDiscountPct, 0) }}%)</span>
                         <span>-Gs. {{ number_format($paymentDiscount, 0, ',', '.') }}</span>
                     </div>
                 @endif
