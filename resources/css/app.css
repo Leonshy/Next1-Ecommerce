@@ -111,7 +111,7 @@
     }
 
     /* Badge system */
-    .badge-oferta   { @apply bg-green-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
+    .badge-oferta   { @apply bg-red-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
     .badge-destacado { @apply bg-amber-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
     .badge-nuevo    { @apply bg-blue-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
     .badge-custom   { @apply bg-primary text-white text-[10px] px-2 py-0.5 font-bold uppercase; }
