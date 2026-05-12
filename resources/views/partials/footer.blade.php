@@ -172,14 +172,7 @@
         <div class="container mx-auto px-4">
             <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/50">
                 <p>© {{ now()->year }} {{ $info['store_name'] ?? 'NEXT1' }}. Todos los derechos reservados.</p>
-                <div class="flex items-center gap-4">
-                    <span>Pagos seguros</span>
-                    <div class="flex gap-2">
-                        <div class="w-10 h-6 bg-white/20 rounded"></div>
-                        <div class="w-10 h-6 bg-white/20 rounded"></div>
-                        <div class="w-10 h-6 bg-white/20 rounded"></div>
-                    </div>
-                </div>
+                <p>Desarrollado por <a href="https://webparaguay.com" target="_blank" rel="noopener" class="text-white/70 hover:text-white transition-colors">Webparaguay</a></p>
             </div>
         </div>
     </div>
