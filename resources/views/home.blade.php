@@ -490,11 +490,30 @@
                 </div>
 
                 {{-- Productos de la campaña (9 cols) --}}
-                <div class="col-span-12 lg:col-span-9">
-                    {{-- Header --}}
-                    <div class="flex items-center justify-between mb-6 border-b-2 border-border">
+                @php
+                    $badgeColor = $campaign->badge_color ?: '#dc2626';
+                    $hex = ltrim($badgeColor, '#');
+                    $r = hexdec(substr($hex, 0, 2));
+                    $g = hexdec(substr($hex, 2, 2));
+                    $b = hexdec(substr($hex, 4, 2));
+                    $bgCard    = "rgba({$r},{$g},{$b},0.06)";
+                    $borderCard = "rgba({$r},{$g},{$b},0.2)";
+                @endphp
+                <div class="col-span-12 lg:col-span-9 rounded-2xl p-4"
+                     style="background-color: {{ $bgCard }}">
+                    {{-- Header mobile --}}
+                    <div class="sm:hidden mb-4 border-b-2 border-border">
+                        <h2 class="text-white font-bold text-sm uppercase px-6 py-3 relative w-full block"
+                            style="background-color: {{ $badgeColor }}">
+                            {{ strtoupper($campaign->name) }}
+                            <span class="absolute -right-3 top-0 h-full w-3"
+                                  style="background-color: {{ $badgeColor }}; clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
+                        </h2>
+                    </div>
+
+                    {{-- Header desktop --}}
+                    <div class="hidden sm:flex items-center mb-6 border-b-2 border-border pb-2">
                         <div class="flex items-center">
-                            @php $badgeColor = $campaign->badge_color ?: '#dc2626'; @endphp
                             <h2 class="text-white font-bold text-sm uppercase px-6 py-3 relative"
                                 style="background-color: {{ $badgeColor }}">
                                 {{ strtoupper($campaign->name) }}
@@ -502,11 +521,6 @@
                                       style="background-color: {{ $badgeColor }}; clip-path: polygon(0 0, 100% 50%, 0 100%)"></span>
                             </h2>
                         </div>
-                        <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"
-                           class="flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-colors pb-2">
-                            Ver todos
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </a>
                     </div>
 
                     @if($campaignProducts->count())
@@ -534,6 +548,18 @@
                                 class="w-8 h-8 rounded-full border border-border bg-white flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7 7 7-7 7"/></svg>
                         </button>
+                    </div>
+
+                    {{-- Ver todos centrado debajo del carrusel --}}
+                    <div class="flex justify-center mt-5">
+                        <a href="{{ route('products.index', ['tag' => $campaign->tag]) }}"
+                           class="inline-flex items-center gap-1.5 text-sm font-semibold px-6 py-2.5 rounded-lg border-2 transition-colors hover:text-white"
+                           style="color: {{ $badgeColor }}; border-color: {{ $badgeColor }}; --hover-bg: {{ $badgeColor }}"
+                           onmouseover="this.style.backgroundColor='{{ $badgeColor }}'"
+                           onmouseout="this.style.backgroundColor='transparent'">
+                            Ver todos
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
                     </div>
                     @else
                     <p class="text-sm text-gray-400 py-8 text-center">No hay productos asociados a esta campaña.</p>

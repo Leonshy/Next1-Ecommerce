@@ -217,45 +217,45 @@
     <div class="md:hidden">
 
         {{-- Fila 1: Logo + Cuenta + Carrito --}}
-        <div class="py-3 bg-white border-b border-border/50">
+        <div class="py-1.5 bg-white border-b border-border/50">
             <div class="container mx-auto px-4 flex items-center justify-between gap-3">
 
                 {{-- Logo --}}
                 <a href="{{ route('home') }}" class="flex-shrink-0">
                     @if(!empty($info['logoUrl']))
                         <img src="{{ $info['logoUrl'] }}" alt="{{ $info['storeName'] ?? config('app.name') }}"
-                             class="h-10 w-auto object-contain">
+                             class="h-7 w-auto object-contain">
                     @else
-                        <div class="flex items-center gap-1.5">
-                            <div class="w-9 h-9 bg-primary rounded flex items-center justify-center">
-                                <span class="text-white font-black text-sm">N1</span>
+                        <div class="flex items-center gap-1">
+                            <div class="w-7 h-7 bg-primary rounded flex items-center justify-center">
+                                <span class="text-white font-black text-xs">N1</span>
                             </div>
-                            <span class="text-primary font-black text-xl tracking-tight">NEXT1</span>
+                            <span class="text-primary font-black text-base tracking-tight">NEXT1</span>
                         </div>
                     @endif
                 </a>
 
                 {{-- Cuenta + Carrito --}}
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
 
                     {{-- Cuenta / Login --}}
                     @guest
                         <a href="{{ route('login') }}"
-                           class="flex items-center gap-2 text-primary hover:text-primary/60 transition-colors font-semibold text-sm">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                           class="flex items-center gap-1.5 text-primary hover:text-primary/60 transition-colors font-semibold text-xs">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                             <span>Iniciar Sesión</span>
                         </a>
                     @else
                         @if(auth()->user()->isAdmin() || auth()->user()->isVendedor())
                             <a href="{{ route('admin.home') }}"
-                               class="flex items-center gap-2 text-primary hover:text-primary/60 transition-colors font-semibold text-sm">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                               class="flex items-center gap-1.5 text-primary hover:text-primary/60 transition-colors font-semibold text-xs">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                                 <span>Panel</span>
                             </a>
                         @else
                             <a href="{{ route('account.index') }}"
-                               class="flex items-center gap-2 text-primary hover:text-primary/60 transition-colors font-semibold text-sm">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                               class="flex items-center gap-1.5 text-primary hover:text-primary/60 transition-colors font-semibold text-xs">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                 <span>{{ explode(' ', auth()->user()->name)[0] }}</span>
                             </a>
                         @endif
@@ -263,8 +263,8 @@
 
                     {{-- Carrito --}}
                     <button onclick="window.dispatchEvent(new CustomEvent('cart:toggle'))"
-                            class="relative flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-accent-hover transition-colors flex-shrink-0">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-9H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            class="relative flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-full font-semibold text-xs hover:bg-accent-hover transition-colors flex-shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-9H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                         <span>Carrito</span>
                         <span x-data="{ count: {{ $cartCount }} }"
                               x-on:cart:updated.window="count = $event.detail.count"
