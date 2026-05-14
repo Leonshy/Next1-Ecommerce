@@ -1,6 +1,10 @@
 # Next1 E-Commerce
 
-Plataforma de comercio electrónico desarrollada para **Next1** (next1.com.py), construida sobre Laravel 12 con Livewire, Alpine.js y Tailwind CSS.
+Plataforma de comercio electrónico desarrollada para **Grupo Next1 E.A.S** — [next1.com.py](https://next1.com.py)
+
+Desarrollado por [Webparaguay](https://webparaguay.com)
+
+Construida sobre Laravel 12 con Livewire, Alpine.js y Tailwind CSS.
 
 ---
 
@@ -200,12 +204,14 @@ Roles: `admin` (acceso total) · `vendedor` (acceso parcial, sin config ni usuar
 - Comprobantes almacenados en `storage/app/public/receipts/`
 
 ### Pagopar
-- Configuración de credenciales disponible en admin
-- Webhooks configurados: `/webhooks/pagopar`
+- Integración completa certificada (3 pasos aprobados)
+- Crear orden, webhook de notificación y consulta de estado
+- Webhook en `/webhooks/pagopar`
+- Credenciales y entorno (sandbox/producción) configurables desde admin
 
 ### Coinbase Commerce / CoinsPaid
 - UI de configuración de credenciales disponible
-- Integración funcional pendiente
+- Integración funcional pendiente de implementar
 
 ---
 
